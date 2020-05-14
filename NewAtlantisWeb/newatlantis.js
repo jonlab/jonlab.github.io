@@ -1,6 +1,6 @@
-import { GLTFLoader } from './jsm/loaders/GLTFLoader.js';
-import { Water } from './jsm/objects/Water.js';
-import { Sky } from './jsm/objects/Sky.js';
+import { GLTFLoader } from './examples/jsm/loaders/GLTFLoader.js';
+import { Water } from './examples/jsm/objects/Water.js';
+import { Sky } from './examples/jsm/objects/Sky.js';
 
 /**
  * NEW ATLANTIS WEB POC
