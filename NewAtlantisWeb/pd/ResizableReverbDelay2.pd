@@ -1,0 +1,51 @@
+#N canvas 765 506 1063 680 10;
+#X obj 69 159 adc~ 1;
+#X text 391 309 diameter of object in meters;
+#X obj 151 492 dac~ 1;
+#X text 375 253 could be linked to transparence;
+#X obj 298 343 / 0.343;
+#X text 359 343 divide by speed of sound = delaytime in miliseconds
+;
+#X obj 151 465 clip~ -0.9 0.9;
+#X text 267 465 to stop the signal overloading;
+#X text 59 109 simple delay : delay time is linked to diameter of objet
+with ajustable feedback;
+#X msg 290 313 50;
+#X obj 128 389 line~;
+#X msg 156 359 1;
+#X obj 196 237 *~ 0.5;
+#X obj 69 193 delwrite~ \$0delay 2000;
+#X obj 333 313 r diam;
+#X obj 162 428 vd~ \$0delay;
+#X obj 229 182 r feedback;
+#X obj 229 213 clip 0.1 0.9;
+#X obj 793 73 s feedback;
+#X obj 796 53 hsl 128 15 0 1 0 0 empty empty empty -2 -8 0 10 -262144
+-1 -1 6600 1;
+#X obj 797 97 hsl 128 15 0 200 0 0 empty empty empty -2 -8 0 10 -262144
+-1 -1 1200 1;
+#X obj 794 116 s diam;
+#X text 941 97 0-200 m;
+#X text 938 53 0-1;
+#X text 821 21 for testing;
+#X obj 275 291 loadbang;
+#X msg 88 364 \$1 1000;
+#X obj 117 337 t f b;
+#X connect 0 0 13 0;
+#X connect 4 0 27 0;
+#X connect 6 0 2 0;
+#X connect 9 0 4 0;
+#X connect 10 0 15 0;
+#X connect 11 0 10 0;
+#X connect 12 0 13 0;
+#X connect 14 0 4 0;
+#X connect 15 0 6 0;
+#X connect 15 0 12 0;
+#X connect 16 0 17 0;
+#X connect 17 0 12 1;
+#X connect 19 0 18 0;
+#X connect 20 0 21 0;
+#X connect 25 0 9 0;
+#X connect 26 0 10 0;
+#X connect 27 0 26 0;
+#X connect 27 1 11 0;
