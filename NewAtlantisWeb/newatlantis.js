@@ -579,7 +579,7 @@ function createObject(o)
 			else if (o.kind === "sound")
 			{
 				var mediaElement = new Audio(o.url);
-				mediaElement.crossOrigin = "anonymous";
+				//mediaElement.crossOrigin = "anonymous";
 				mediaElement.loop = true;
 				mediaElement.play();
 				sound.setMediaElementSource( mediaElement );
