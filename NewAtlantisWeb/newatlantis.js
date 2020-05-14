@@ -582,6 +582,7 @@ function createObject(o)
 
 				var audioLoader = new THREE.AudioLoader();
 				audioLoader.load( o.url, function( buffer ) {
+					console.log("LOADED!", buffer);
 				sound.setBuffer( buffer );
 				sound.setLoop( true );
 				sound.setVolume( 0.5 );
