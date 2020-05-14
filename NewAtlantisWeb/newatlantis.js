@@ -578,11 +578,22 @@ function createObject(o)
 
 			else if (o.kind === "sound")
 			{
-				var mediaElement = new Audio(o.url);
-				mediaElement.crossOrigin = "anonymous";
-				mediaElement.loop = true;
-				mediaElement.play();
-				sound.setMediaElementSource( mediaElement );
+
+
+				var audioLoader = new THREE.AudioLoader();
+				audioLoader.load( o.url, function( buffer ) {
+				sound.setBuffer( buffer );
+				sound.setLoop( true );
+				sound.setVolume( 0.5 );
+				sound.play();
+				});
+
+		
+				//var mediaElement = new Audio(o.url);
+				//mediaElement.crossOrigin = "anonymous";
+				//mediaElement.loop = true;
+				//mediaElement.play();
+				//sound.setMediaElementSource( mediaElement );
 				sound.setRefDistance( 1 );
 				sound.setRolloffFactor(1.5);
 				sound.setDistanceModel("exponential");
