@@ -1115,21 +1115,21 @@ function CreateGUI()
 	//fAudioSources.add(obj, "synthesis");
 
 	var sounds = [
-		'http://locus.creacast.com:9001/le-rove_niolon.mp3',
-		'http://locus.creacast.com:9001/acra_wave_farm.mp3',
-		'http://locus.creacast.com:9001/deptford_albany.mp3',
-		'./sounds/banque/elements/eau.mp3', 
-		'./sounds/banque/elements/feu.mp3',
-		'./sounds/banque/elements/vent.mp3',
-		'./sounds/banque/animaux/gibbon.mp3',
-		'./sounds/banque/animaux/oiseaux01.mp3',
-		'./sounds/banque/animaux/oiseaux02.mp3',
-		'./sounds/banque/animaux/poules.mp3',
-		'./sounds/banque/animaux/ronronment.mp3',
-		'./sounds/banque/corps.mp3',
-		'./sounds/banque/synthese/essorage_grave.mp3',
-		'./sounds/banque/synthese/gresillements_guitare.mp3',
-		'./sounds/banque/synthese/terre_gargouillante00.mp3'
+		'https://locus.creacast.com:9001/le-rove_niolon.mp3',
+		'https://locus.creacast.com:9001/acra_wave_farm.mp3',
+		'https://locus.creacast.com:9001/deptford_albany.mp3',
+		'sounds/banque/elements/eau.mp3', 
+		'sounds/banque/elements/feu.mp3',
+		'sounds/banque/elements/vent.mp3',
+		'sounds/banque/animaux/gibbon.mp3',
+		'sounds/banque/animaux/oiseaux01.mp3',
+		'sounds/banque/animaux/oiseaux02.mp3',
+		'sounds/banque/animaux/poules.mp3',
+		'sounds/banque/animaux/ronronment.mp3',
+		'sounds/banque/corps.mp3',
+		'sounds/banque/synthese/essorage_grave.mp3',
+		'sounds/banque/synthese/gresillements_guitare.mp3',
+		'sounds/banque/synthese/terre_gargouillante00.mp3'
 	];
 	fAudioSources.add(parameters, "source", sounds);
 	fAudioSources.add(parameters, "createSource");
