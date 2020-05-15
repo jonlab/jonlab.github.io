@@ -19,6 +19,8 @@ var avatarname = "";
 var main_timer = 0;
 var send_timer = 0;
 var avatar_dirty = false;
+var avatar_speed = 0.1;
+
 var space_objects = [];  //overall objects
 var objects = []; //THREE objects
 var objects_main = [];
@@ -33,6 +35,8 @@ var renderer; //THREE renderer
 var patch;
 var gui;
 var parameters;
+var inputFile;
+
 
 var vec = new THREE.Vector3();
 var dir = new THREE.Vector3();
@@ -66,7 +70,8 @@ var Inspector = function()
 	};
 	this.createPatch = function()
 	{
-		document.getElementById('pd').click();
+		inputFile.click();
+		//document.getElementById('pd').click();
 	};
 
 	this.recorder = function() {
@@ -172,8 +177,8 @@ var light = new THREE.DirectionalLight( 0xffffff, 0.8 );
 //light = new THREE.SpotLight( 0xffffff, 1, 0, Math.PI / 5, 0.3 );
 light.position.set(10,30, 0);
 light.castShadow = true;
-light.shadow.camera.near = 0.1;
-light.shadow.camera.far = 100;
+light.shadow.camera.near = 0.01;
+light.shadow.camera.far = 1000;
 light.shadow.bias = 0.0001;
 light.shadow.mapSize.width = 1024;
 light.shadow.mapSize.height = 1024;
@@ -302,19 +307,19 @@ function animate() {
 	main_timer += 1/60;
 	water.material.uniforms[ 'time' ].value += 1.0 / 60.0;
 	if (MovingForward === true) {
-		moveCameraForward(0.1);
+		moveCameraForward(avatar_speed);
 		avatar_dirty = true;
 	}
 	if (MovingBackward === true) {
-		moveCameraForward(-0.1);
+		moveCameraForward(-avatar_speed);
 		avatar_dirty = true;
 	}
 	if (MovingLeft === true) {
-		moveCameraRight(-0.2);
+		moveCameraRight(-avatar_speed);
 		avatar_dirty = true;
 	}
 	if (MovingRight === true) {
-		moveCameraRight(0.2);
+		moveCameraRight(avatar_speed);
 		avatar_dirty = true;
 	}
 
@@ -453,19 +458,29 @@ function createObject(o)
 		//material.color.setHex(Math.random() * 0xffffff );
 		scene.add(cube);
 
+		var display_text = "";
+
 
 		//texte
-		if (o.kind === "avatar")// || o.kind === "stream" || o.kind === "sound")
+		//if (o.kind === "avatar")// || o.kind === "stream" || o.kind === "sound")
 		{
+			if (o.name !== undefined)
+			{
+				display_text = o.name;
+			}
 			
-			if (o.name === undefined)
-			o.name = "untitled";
+			
+		}
 
-				var geometryText = new THREE.TextGeometry( o.name, {
+
+
+		if (display_text !== "")
+		{
+				var geometryText = new THREE.TextGeometry( display_text, {
 					font: font,
 					size: 30,
-					height: 1,
-					curveSegments: 12,
+					height: 0.5,
+					curveSegments: 2,
 					bevelEnabled: true,
 					bevelThickness: 1,
 					bevelSize: 0,
@@ -476,12 +491,14 @@ function createObject(o)
 				var materialText = new THREE.MeshStandardMaterial();
 				var text = new THREE.Mesh(geometryText, materialText);
 				cube.add(text);
-				text.scale.set(0.02,0.02,0.02);
-				text.position.y = 2;
+				text.scale.set(0.015,0.015,0.015);
+				text.position.y = 1.2;
 				text.rotation.y = Math.PI;
-				console.log("text", text);
-			
+				//console.log("text", text);
+
 		}
+
+
 		if (o.kind === "avatar")
 		{
 		}
@@ -596,8 +613,26 @@ function createObject(o)
 				//mediaElement.play();
 				//sound.setMediaElementSource( mediaElement );
 				sound.setRefDistance( 1 );
-				sound.setRolloffFactor(1.5);
+				sound.setRolloffFactor(1);
 				sound.setDistanceModel("exponential");
+
+				//test IR
+
+				var convolver = audioContext.createConvolver();
+				var irRRequest = new XMLHttpRequest();
+				irRRequest.open("GET", "IR/1_tunnel_souterrain.wav", true);
+				irRRequest.responseType = "arraybuffer";
+				irRRequest.onload = function() {
+					audioContext.decodeAudioData( irRRequest.response, 
+						function(buffer) { convolver.buffer = buffer; } );
+				}
+				irRRequest.send();
+				// note the above is async; when the buffer is loaded, it will take effect, but in the meantime, the sound will be unaffected.
+
+				sound.gain.connect( convolver);
+				convolver.connect( sound.listener.getInput() );
+
+
 			}	
 			cube.add(sound);
 			cube.audio = sound;
@@ -633,6 +668,7 @@ function openFile(event) {
 
 		var obj= getNewObjectCommand("cube");
 		obj.pd = text;
+		obj.name = "PD patch";
 		firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
 	};
 	reader.readAsText(input.files[0]);
@@ -670,7 +706,6 @@ function UpdateSelection()
 	selection.remote.y = object_selection.position.y;
 	selection.remote.z = object_selection.position.z;
 	//console.log("update selection", selection);
-
 	firebase.database().ref('spaces/test/objects/' + selection.remote.id).set(selection.remote);
 }
 
@@ -692,7 +727,6 @@ function onMouseMove(event) {
 
 	if (MouseDrag)
 	{
-	
 		var movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
 		var movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
 		euler.setFromQuaternion(camera.quaternion);
@@ -707,13 +741,10 @@ function onMouseMove(event) {
 		var movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
 		var movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
 		vec.setFromMatrixColumn(camera.matrix, 0);
-		object_selection.position.addScaledVector(vec, movementX*0.01);
+		object_selection.position.addScaledVector(vec, movementX*0.02);
 		//camera.getWorldUp(dir);
-		object_selection.position.addScaledVector(camera.up, movementY*-0.01);
-
+		object_selection.position.addScaledVector(camera.up, movementY*-0.02);
 		UpdateSelection();
-
-		
 	}
 }
 
@@ -782,14 +813,12 @@ function getNewObjectCommand(kind)
 	return obj;
 }
 
-
-
-
 var startButton = document.getElementById( 'startButton' );
 startButton.onclick = StartDSP;
-
-
-
+var inputFile = document.createElement("input");
+inputFile.type = "file";
+inputFile.id = 'pd';
+inputFile.onchange = openFile;
 
 function StartDSP()
 {
@@ -896,6 +925,9 @@ function StartDSP()
 			case 39: // right
 				MovingRight = false;
 				break;
+			case 16: //shift
+				avatar_speed = 0.1;
+			break;
 		}
 	}, false);
 
@@ -918,6 +950,9 @@ function StartDSP()
 				break;
 			case 8: //backspace
 				DeleteCurrentSelection();
+			break;
+			case 16: //shift
+				avatar_speed = 0.5;
 			break;
 		}
 
@@ -1072,6 +1107,7 @@ function ActionObject(kind)
 {
 
 	var obj= getNewObjectCommand(kind);
+	obj.name = "3D object";
 	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
 }
 
@@ -1088,7 +1124,7 @@ function ActionSound(url)
 {
 
 	var obj= getNewObjectCommand("sound");
-	obj.name = url;
+	obj.name = "sound";
 	obj.url = url;
 	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
 }
