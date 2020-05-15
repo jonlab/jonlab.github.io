@@ -3,3 +3,5 @@
 -object type on display
 -pd patch loading fixed
 -IR integrated
+
+-reverb zones / spaces

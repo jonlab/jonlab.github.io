@@ -55,7 +55,8 @@ var Inspector = function()
 	//this.displayOutline = false;
 	this.color = [ 0, 128, 255 ]; // RGB array
 	this.volume = 0.5;
-	this.source = "sounds/banque/elements/eau.mp3"
+	this.source = "sounds/banque/elements/eau.mp3";
+	this.object = "cube";
 	this.update = function() {
 		alert("update");
 	};
@@ -67,6 +68,12 @@ var Inspector = function()
 	{
 		var url = this.source;
 		ActionSound(url);
+	};
+
+	this.createObject = function()
+	{
+		var kind = this.object;
+		ActionObject(kind);
 	};
 	this.createPatch = function()
 	{
@@ -182,15 +189,10 @@ light.shadow.camera.far = 1000;
 light.shadow.bias = 0.0001;
 light.shadow.mapSize.width = 1024;
 light.shadow.mapSize.height = 1024;
-
 scene.add(light);
 
-
-
 // Water
-
 var waterGeometry = new THREE.PlaneBufferGeometry( 10000, 10000 );
-
 var water = new Water(
 	waterGeometry,
 	{
@@ -207,78 +209,50 @@ var water = new Water(
 		fog: scene.fog !== undefined
 	}
 );
-
 water.rotation.x = - Math.PI / 2;
 water.position.y = 0;
 scene.add( water );
 
-
 // Skybox
-
 var sky = new Sky();
-
 var uniforms = sky.material.uniforms;
-
 uniforms[ 'turbidity' ].value = 10;
 uniforms[ 'rayleigh' ].value = 2;
 uniforms[ 'luminance' ].value = 1;
 uniforms[ 'mieCoefficient' ].value = 0.005;
 uniforms[ 'mieDirectionalG' ].value = 0.8;
-
-
 var cubeCamera = new THREE.CubeCamera( 0.1, 1, 512 );
 cubeCamera.renderTarget.texture.generateMipmaps = true;
 cubeCamera.renderTarget.texture.minFilter = THREE.LinearMipmapLinearFilter;
-
 scene.background = cubeCamera.renderTarget;
-
 function updateSun() {
-
 	var theta = Math.PI * ( parameters.inclination - 0.5 );
 	var phi = 2 * Math.PI * ( parameters.azimuth - 0.5 );
-
 	light.position.x = parameters.distance * Math.cos( phi );
 	light.position.y = parameters.distance * Math.sin( phi ) * Math.sin( theta );
 	light.position.z = parameters.distance * Math.sin( phi ) * Math.cos( theta );
-
 	sky.material.uniforms[ 'sunPosition' ].value = light.position.copy( light.position );
 	water.material.uniforms[ 'sunDirection' ].value.copy( light.position ).normalize();
-
 	cubeCamera.update( renderer, sky );
-
 }
-
 updateSun();
-
-
-
 
 listener = new THREE.AudioListener();
 camera.add(listener);
 audioContext = listener.context;
-fontLoader = new THREE.FontLoader();
-
-
-
-
+//loaders
 gltfLoader = new GLTFLoader();
-
-
 //Flamingo.glb
 //Parrot.glb
 //Duck.glb
 //Flower.glb
 
-
-
-
-
+fontLoader = new THREE.FontLoader();
 fontLoader.load( 'fonts/helvetiker_bold.typeface.json', function ( _font ) 
 {
 	font = _font;
 });
-
-		  
+  
 window.addEventListener('resize', onWindowResize, false);
 
 function Login()
@@ -300,7 +274,6 @@ function AddGroundPlane(x,y,z,sizex, sizez)
 	plane.position.z = z;
 	scene.add(plane);
 }
-
 
 function animate() {
 	requestAnimationFrame(animate);
@@ -353,20 +326,14 @@ function animate() {
 			obj.scale.z = 1;
 
 			firebase.database().ref('spaces/test/objects/' + avatarname).set(obj);
-
 		}
 	}
-
 	renderer.render(scene, camera);
 }
 
-
 animate();
 
-
-
-
-//creates a new atlantis object
+//creates a new atlantis object (on database demand)
 function createObject(o) 
 {
 	var cube;
@@ -411,6 +378,14 @@ function createObject(o)
 		else if (o.kind === "knot")
 		{
 			geometry = new THREE.TorusKnotGeometry( 0.5, 0.2, 60, 8 );
+		}
+		else if (o.kind === "cylinder")
+		{
+			geometry = new THREE.CylinderGeometry( 1, 1, 2, 16 );
+		}
+		else if (o.kind === "cone")
+		{
+			geometry = new THREE.ConeGeometry( 1, 2, 16);
 		}
 		else 
 		{
@@ -459,8 +434,6 @@ function createObject(o)
 		scene.add(cube);
 
 		var display_text = "";
-
-
 		//texte
 		//if (o.kind === "avatar")// || o.kind === "stream" || o.kind === "sound")
 		{
@@ -468,12 +441,7 @@ function createObject(o)
 			{
 				display_text = o.name;
 			}
-			
-			
 		}
-
-
-
 		if (display_text !== "")
 		{
 				var geometryText = new THREE.TextGeometry( display_text, {
@@ -495,12 +463,17 @@ function createObject(o)
 				text.position.y = 1.2;
 				text.rotation.y = Math.PI;
 				//console.log("text", text);
-
 		}
-
 
 		if (o.kind === "avatar")
 		{
+			//avatar flashlight
+			//HERE
+			//var avatarlight = new THREE.SpotLight( 0xffccaa, 1, 0, Math.PI / 10, 0 );
+			//cube.add(avatarlight);
+			//avatarlight.position.set(0,0, 0);
+			//avatarlight.rotation.set(0,0, 0);
+			//avatarlight.castShadow = true;
 		}
 		else if (o.pd !== undefined)
 		{
@@ -513,12 +486,9 @@ function createObject(o)
 				console.log("loaded patch:", patch);
 				var out = patch.o(0);
 				console.log("out:", out);
-
-
 				var outnode = patch.o(0).getOutNode();
 				console.log("out node", outnode);
 				//patch.o(0).setWaa(Pd.getAudio().context.createGain(), 0);
-
 				if (outnode !== undefined)
 				{
 					sound.setNodeSource(patch.o(0).getOutNode());
@@ -531,9 +501,6 @@ function createObject(o)
 			sound.setRefDistance( 1 );
 			sound.setRolloffFactor(1);
 			sound.setDistanceModel("exponential");
-			//panner.panningModel = 'HRTF';
-			//panner.distanceModel = 'inverse';
-			//sound.offset = Math.random()*3;
 			sound.play();
 			cube.add(sound);
 			cube.audio = sound;
@@ -549,16 +516,13 @@ function createObject(o)
 				firebase.database().ref('spaces/test/objects/' + selection.remote.id).set(selection.remote);
 			});
 			*/
-			
 		}
 		else
 		{
 			// create the PositionalAudio object (passing in the listener)
 			var sound = new THREE.PositionalAudio( listener );
-
 			// load a sound and set it as the PositionalAudio object's buffer
 			var audioLoader = new THREE.AudioLoader();
-
 			if (o.kind === "cube")
 			{
 				/*audioLoader.load( 'sounds/rec_2018_10_21_10_24_32.wav', function( buffer ) {
@@ -592,11 +556,8 @@ function createObject(o)
 				mediaElement.play();
 				sound.setMediaElementSource( mediaElement );
 			}
-
 			else if (o.kind === "sound")
 			{
-
-
 				var audioLoader = new THREE.AudioLoader();
 				audioLoader.load( o.url, function( buffer ) {
 					console.log("LOADED!", buffer);
@@ -605,8 +566,6 @@ function createObject(o)
 				sound.setVolume( 0.5 );
 				sound.play();
 				});
-
-		
 				//var mediaElement = new Audio(o.url);
 				//mediaElement.crossOrigin = "anonymous";
 				//mediaElement.loop = true;
@@ -615,9 +574,7 @@ function createObject(o)
 				sound.setRefDistance( 1 );
 				sound.setRolloffFactor(1.2);
 				sound.setDistanceModel("exponential");
-
 				//test IR
-
 				var convolver = audioContext.createConvolver();
 				var irRRequest = new XMLHttpRequest();
 				irRRequest.open("GET", "IR/1_tunnel_souterrain.wav", true);
@@ -628,11 +585,8 @@ function createObject(o)
 				}
 				irRRequest.send();
 				// note the above is async; when the buffer is loaded, it will take effect, but in the meantime, the sound will be unaffected.
-
 				sound.gain.connect( convolver);
 				convolver.connect( sound.listener.getInput() );
-
-
 			}	
 			cube.add(sound);
 			cube.audio = sound;
@@ -651,21 +605,14 @@ function openFile(event) {
 		var node = document.getElementById('output');
 		//node.innerText = text;
 		console.log(reader.result.substring(0, 200));
-		
-		
 		/*if (patch !== undefined) 
 		{
 			Pd.destroyPatch(patch);
 		}
 		*/
 		//send a patch instruction to firebase
-
 		//patch = Pd.loadPatch(text);
 		//console.log("loaded patch:", patch);
-
-
-		
-
 		var obj= getNewObjectCommand("cube");
 		obj.pd = text;
 		obj.name = "PD patch";
@@ -1107,7 +1054,7 @@ function ActionObject(kind)
 {
 
 	var obj= getNewObjectCommand(kind);
-	obj.name = "3D object";
+	obj.name = kind;
 	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
 }
 
@@ -1162,7 +1109,7 @@ function CreateGUI()
 	//fAudioSources.add(obj, "stream");
 	//fAudioSources.add(obj, "synthesis");
 
-	var sounds = [
+	/*var sounds = [
 		'http://locus.creacast.com:9001/le-rove_niolon.mp3',
 		'http://locus.creacast.com:9001/acra_wave_farm.mp3',
 		'http://locus.creacast.com:9001/deptford_albany.mp3',
@@ -1179,7 +1126,8 @@ function CreateGUI()
 		'sounds/banque/synthese/gresillements_guitare.mp3',
 		'sounds/banque/synthese/terre_gargouillante00.mp3'
 	];
-	fAudioSources.add(parameters, "source", sounds);
+	*/
+	fAudioSources.add(parameters, "source", na_library_sound);
 	fAudioSources.add(parameters, "createSource");
 	fAudioSources.add(parameters, "createPatch");
 
@@ -1191,9 +1139,12 @@ function CreateGUI()
 	fSpace.add(parameters, "space2");
 	fSpace.add(parameters, "space3");	
 
-	f3D.add(parameters, "cube");	
-	f3D.add(parameters, "knot");	
-	f3D.add(parameters, "torus");	
+	f3D.add(parameters, "object", na_library_objects);
+	f3D.add(parameters, "createObject");
+
+	//f3D.add(parameters, "cube");	
+	//f3D.add(parameters, "knot");
+	//f3D.add(parameters, "torus");	
 
 	
 	//gui.add(obj, 'name');
