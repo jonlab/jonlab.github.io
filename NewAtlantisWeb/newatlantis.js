@@ -613,7 +613,7 @@ function createObject(o)
 				//mediaElement.play();
 				//sound.setMediaElementSource( mediaElement );
 				sound.setRefDistance( 1 );
-				sound.setRolloffFactor(1);
+				sound.setRolloffFactor(1.2);
 				sound.setDistanceModel("exponential");
 
 				//test IR
