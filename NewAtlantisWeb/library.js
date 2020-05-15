@@ -48,3 +48,9 @@ var na_library_objects = {
 };
 
 
+var na_library_patches = 
+{
+	pd_input_modulation:'pd/adc_osc.pd'
+
+};
+

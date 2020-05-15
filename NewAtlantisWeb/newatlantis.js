@@ -57,6 +57,7 @@ var Inspector = function()
 	this.volume = 0.5;
 	this.source = "sounds/banque/elements/eau.mp3";
 	this.object = "cube";
+	this.patch = "";
 	this.update = function() {
 		alert("update");
 	};
@@ -77,8 +78,13 @@ var Inspector = function()
 	};
 	this.createPatch = function()
 	{
+		var url = this.patch;
+		ActionPatch(url);
+	};
+
+	this.loadPatch = function()
+	{
 		inputFile.click();
-		//document.getElementById('pd').click();
 	};
 
 	this.recorder = function() {
@@ -1028,10 +1034,18 @@ function ActionDestroy()
 	firebase.database().ref('spaces/test/objects').set([]);
 }
 
-function ActionPatch()
+function ActionPatch(url)
 {
-	var obj= getNewObjectCommand("patch");
-	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
+	var req = new XMLHttpRequest();
+	req.open("GET", url, true);
+	
+	req.onload = function() {
+		var obj= getNewObjectCommand("cube");
+		obj.pd = req.response;
+		obj.name = url;
+		firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);	
+	}
+	req.send();
 	
 }
 
@@ -1075,6 +1089,15 @@ function ActionSound(url)
 	obj.url = url;
 	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
 }
+
+/*function ActionPatch(url)
+{
+
+	var obj= getNewObjectCommand("sound");
+	obj.name = "sound";
+	obj.url = url;
+	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
+}*/
 
 function DeleteCurrentSelection()
 {
@@ -1129,7 +1152,10 @@ function CreateGUI()
 	*/
 	fAudioSources.add(parameters, "source", na_library_sound);
 	fAudioSources.add(parameters, "createSource");
+	fAudioSources.add(parameters, "patch", na_library_patches);
 	fAudioSources.add(parameters, "createPatch");
+	fAudioSources.add(parameters, "loadPatch");
+
 
 	fBox.add(parameters, "box1");
 	fBox.add(parameters, "box2");
