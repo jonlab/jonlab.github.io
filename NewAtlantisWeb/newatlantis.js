@@ -1127,9 +1127,9 @@ function CreateGUI()
 	//fAudioSources.add(obj, "synthesis");
 
 	var sounds = [
-		'https://locus.creacast.com:9001/le-rove_niolon.mp3',
-		'https://locus.creacast.com:9001/acra_wave_farm.mp3',
-		'https://locus.creacast.com:9001/deptford_albany.mp3',
+		'http://locus.creacast.com:9001/le-rove_niolon.mp3',
+		'http://locus.creacast.com:9001/acra_wave_farm.mp3',
+		'http://locus.creacast.com:9001/deptford_albany.mp3',
 		'sounds/banque/elements/eau.mp3', 
 		'sounds/banque/elements/feu.mp3',
 		'sounds/banque/elements/vent.mp3',
