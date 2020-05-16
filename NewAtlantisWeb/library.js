@@ -47,6 +47,33 @@ var na_library_objects = {
 
 };
 
+var na_library_ir = {
+	ir_0_entree_la_friche:'IR/0_entree_la_friche copie.wav',
+	ir_1_tunnel_souterrain:'IR/1_tunnel_souterrain.wav',
+	ir_2_sous_dome:'IR/2_sous_dome.wav',
+	ir_3_parking:'IR/3_parking.wav',
+	ir_4_skate_park:'IR/4_skate_park.wav',
+	ir_5_cours:'IR/5_cours.wav',
+	ir_6_escalier_rouge:'IR/6_escalier_rouge.wav',
+	ir_7_passage_couvert:'IR/7_passage_couvert.wav',
+	ir_8_entree_adjico:'IR/8_entree_adjico.wav',
+	ir_9_allee_cache:'IR/9_allee_cache.wav',
+	ir_10_jardin:'IR/10_jardin.wav',
+	ir_11_villa:'IR/11_villa.wav',
+	ir_12_entree_la_friche:'IR/12_entree_la_friche.wav',
+	ir_13_2e_entree_GMEM:'IR/13_2e_entree_GMEM.wav',
+	ir_14_2e_plateau:'IR/14_2e_plateau.wav',
+	ir_15_toit:'IR/15_toit.wav',
+	ir_16_terrasse_grandes_tables:'IR/16_terrasse_grandes_tables.wav',
+	ir_17_jeu_enfant:'IR/17_jeu_enfant.wav',
+	ir_18_francois_simon_bas:'IR/18_francois_simon_bas.wav',
+	ir_19_jobin:'IR/19_jobin.wav',
+	ir_20_decent_vers_dome:'IR/20_decent_vers_dome.wav',
+	ir_21_etage_access_grandes_tables:'IR/21_etage_access_grandes_tables.wav',
+	ir_22_francois_simon_haut:'IR/22_francois_simon_haut.wav'
+
+};
+
 
 var na_library_patches = 
 {

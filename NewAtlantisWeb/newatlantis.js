@@ -24,6 +24,10 @@ var avatar_speed = 0.1;
 var space_objects = [];  //overall objects
 var objects = []; //THREE objects
 var objects_main = [];
+
+var water;
+var cubeCamera;
+
 var selection; //current target
 var object_selection;
 var listener;
@@ -36,7 +40,7 @@ var patch;
 var gui;
 var parameters;
 var inputFile;
-
+var fogColor;
 
 var vec = new THREE.Vector3();
 var dir = new THREE.Vector3();
@@ -57,7 +61,8 @@ var Inspector = function()
 	this.volume = 0.5;
 	this.source = "sounds/banque/elements/eau.mp3";
 	this.object = "cube";
-	this.patch = "";
+	this.patch = "pd/adc_osc.pd";
+	this.ir = "IR/1_tunnel_souterrain.wav";
 	this.update = function() {
 		alert("update");
 	};
@@ -75,6 +80,12 @@ var Inspector = function()
 	{
 		var kind = this.object;
 		ActionObject(kind);
+	};
+
+	this.createResonator = function()
+	{
+		var ir = this.ir;
+		ActionResonator(ir);
 	};
 	this.createPatch = function()
 	{
@@ -172,6 +183,13 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 //renderer.shadowMap.type = THREE.BasicShadowMap;
 document.body.appendChild(renderer.domElement);
 
+
+fogColor = new THREE.Color(0x001133);
+//scene.background = fogColor;
+//scene.fog = new THREE.Fog(fogColor, 0.0025, 20);
+//scene.fog.density = 0;
+
+
 //cells of 10ksqm
 for (var x=-200;x<=200;x+=100)
 {
@@ -199,7 +217,7 @@ scene.add(light);
 
 // Water
 var waterGeometry = new THREE.PlaneBufferGeometry( 10000, 10000 );
-var water = new Water(
+water = new Water(
 	waterGeometry,
 	{
 		textureWidth: 512,
@@ -227,7 +245,7 @@ uniforms[ 'rayleigh' ].value = 2;
 uniforms[ 'luminance' ].value = 1;
 uniforms[ 'mieCoefficient' ].value = 0.005;
 uniforms[ 'mieDirectionalG' ].value = 0.8;
-var cubeCamera = new THREE.CubeCamera( 0.1, 1, 512 );
+cubeCamera = new THREE.CubeCamera( 0.1, 1, 512 );
 cubeCamera.renderTarget.texture.generateMipmaps = true;
 cubeCamera.renderTarget.texture.minFilter = THREE.LinearMipmapLinearFilter;
 scene.background = cubeCamera.renderTarget;
@@ -302,6 +320,25 @@ function animate() {
 		avatar_dirty = true;
 	}
 
+	//underwater logic
+	
+	if (camera.position.y < 0)
+	{
+		water.rotation.x = + Math.PI / 2;
+		/*scene.background = fogColor;
+		if (scene.fog === undefined)
+		{
+			scene.fog = new THREE.Fog(fogColor, 1, 20);
+		}*/
+	}
+	else
+	{
+		water.rotation.x = - Math.PI / 2;
+		/*scene.background = cubeCamera.renderTarget;
+		scene.fog = undefined;*/
+	}
+	
+
 	//send avatar position to the server
 	var send_interval = 0.05;
 	if (avatarname !== "" && avatar_dirty && main_timer > 3)
@@ -334,6 +371,78 @@ function animate() {
 			firebase.database().ref('spaces/test/objects/' + avatarname).set(obj);
 		}
 	}
+
+	//apply reverb?
+
+	for (var j in space_objects)
+	{
+		var r = space_objects[j];
+		if (r.remote.kind === "resonator")
+		{
+			var bb = new THREE.Box3();
+			r.object3D.geometry.computeBoundingBox();
+			bb.copy( r.object3D.geometry.boundingBox ).applyMatrix4( r.object3D.matrixWorld );
+			//console.log("test BB", bb);
+			for (var i in space_objects)
+			{
+				var o = space_objects[i];
+				if (o.object3D.audio !== undefined && o.object3D.convolver === undefined )
+				{
+					//check if sound inside box
+					
+					var isInside = bb.containsPoint(o.object3D.position);
+					
+					if (isInside)
+					{
+						//console.log("INSIDE! connect ", o.object3D.audio.gain, r.object3D.convolver);
+						if (r.object3D.convolver !== undefined)
+						{
+							if (o.object3D.audio.gain != undefined)
+							{
+								o.object3D.audio.gain.disconnect();
+								o.object3D.audio.gain.connect( r.object3D.convolver);
+							}
+						}
+					}	
+					else
+					{
+						//console.log("OUTSIDE!");
+						if (o.object3D.audio.gain != undefined)
+						{
+							o.object3D.audio.gain.disconnect();
+							o.object3D.audio.gain.connect(o.object3D.audio.listener.getInput());
+						}
+						
+					
+					}
+				}
+			}
+		}
+	}
+
+
+			
+			/*
+			var box = <Your non-aligned box>
+var point = <Your point>
+
+box.geometry.computeBoundingBox(); // This is only necessary if not allready computed
+box.updateMatrixWorld(true); // This might be necessary if box is moved
+var boxMatrixInverse = new THREE.Matrix4().getInverse(box.matrixWorld);
+var inverseBox = box.clone();
+var inversePoint = point.clone();
+inverseBox.applyMatrix(boxMatrixInverse);
+inversePoint.applyMatrix4(boxMatrixInverse);
+var bb = new THREE.Box3().setFromObject(inverseBox);
+var isInside = bb.containsPoint(inversePoint);
+*/
+
+		
+		//console.log("update " + o.object3D);
+
+	
+
+
 	renderer.render(scene, camera);
 }
 
@@ -355,7 +464,7 @@ function createObject(o)
 	}
 	else
 	{
-		console.log("create object"+ o.kind);
+		console.log("create object "+ o.kind);
 		var geometry;
 		if (o.kind === "cube")
 		{
@@ -393,6 +502,10 @@ function createObject(o)
 		{
 			geometry = new THREE.ConeGeometry( 1, 2, 16);
 		}
+		else if (o.kind === "resonator")
+		{
+			geometry = new THREE.BoxGeometry();
+		}
 		else 
 		{
 			geometry = new THREE.SphereGeometry(1,20,20);
@@ -400,7 +513,7 @@ function createObject(o)
 		
 		var material = null;
 		
-		if (o.kind === "box")
+		if (o.kind === "box" || o.kind === "resonator")
 		{
 			material = new THREE.MeshStandardMaterial({transparent:true,opacity:0.5});
 		}
@@ -430,7 +543,7 @@ function createObject(o)
 		material.color.g = o.g;
 		material.color.b = o.b;
 
-		if (o.kind !== "box")
+		if (o.kind !== "box" && o.kind !== "resonator")
 		{
 			cube.castShadow = true;
 			cube.receiveShadow = false;
@@ -476,10 +589,12 @@ function createObject(o)
 			//avatar flashlight
 			//HERE
 			//var avatarlight = new THREE.SpotLight( 0xffccaa, 1, 0, Math.PI / 10, 0 );
-			//cube.add(avatarlight);
-			//avatarlight.position.set(0,0, 0);
-			//avatarlight.rotation.set(0,0, 0);
-			//avatarlight.castShadow = true;
+			/*var avatarlight = new THREE.PointLight(0xffccaa, 1, 10);
+			cube.add(avatarlight);
+			avatarlight.position.set(0,0, 0);
+			avatarlight.rotation.set(0,0, 0);
+			avatarlight.castShadow = true;
+			*/
 		}
 		else if (o.pd !== undefined)
 		{
@@ -580,6 +695,8 @@ function createObject(o)
 				sound.setRefDistance( 1 );
 				sound.setRolloffFactor(1.2);
 				sound.setDistanceModel("exponential");
+				
+				/*
 				//test IR
 				var convolver = audioContext.createConvolver();
 				var irRRequest = new XMLHttpRequest();
@@ -593,6 +710,23 @@ function createObject(o)
 				// note the above is async; when the buffer is loaded, it will take effect, but in the meantime, the sound will be unaffected.
 				sound.gain.connect( convolver);
 				convolver.connect( sound.listener.getInput() );
+				*/
+				
+			}	
+
+			else if (o.kind === "resonator")
+			{
+				cube.convolver = audioContext.createConvolver();
+				var audioLoader = new THREE.AudioLoader();
+				audioLoader.load( o.ir, function( buffer ) {
+					console.log("LOADED!", buffer);
+					cube.convolver.buffer = buffer;
+				});
+				sound.setRefDistance( 1 );
+				sound.setRolloffFactor(0);
+				sound.setDistanceModel("linear");
+				//sound.gain.connect( o.convolver);
+				cube.convolver.connect( sound.listener.getInput() );
 			}	
 			cube.add(sound);
 			cube.audio = sound;
@@ -751,11 +885,11 @@ function getNewObjectCommand(kind)
 
 	//FIXME
 	obj.scale = {};
-	if (kind === "box")
+	if (kind === "box" || kind === "resonator")
 	{
-		obj.scale.x = 5;
-		obj.scale.y = 3;
-		obj.scale.z = 4;
+		obj.scale.x = 10;
+		obj.scale.y = 6;
+		obj.scale.z = 8;
 	}
 	else
 	{
@@ -1090,6 +1224,14 @@ function ActionSound(url)
 	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
 }
 
+function ActionResonator(ir)
+{
+	var obj= getNewObjectCommand("resonator");
+	obj.name = "resonator";
+	obj.ir = ir;
+	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
+}
+
 /*function ActionPatch(url)
 {
 
@@ -1119,37 +1261,14 @@ function CreateGUI()
 	var fAudioSources = gui.addFolder('Audio Source');
 	var f3D = gui.addFolder('3D Object');
 	var fBox = gui.addFolder('Box (modifier) (not impl.)');
-	var fSpace = gui.addFolder('Space (resonator) (not impl.)');
+	var fSpace = gui.addFolder('Space (resonator)');
 
 
 
 	var folder = gui.addFolder( 'Sky' );
 	folder.add( parameters, 'inclination', 0, 0.5, 0.0001 ).onChange( updateSun );
 	folder.add( parameters, 'azimuth', 0, 1, 0.0001 ).onChange( updateSun );
-				
-
-	//fAudioSources.add(obj, "recorder");
-	//fAudioSources.add(obj, "stream");
-	//fAudioSources.add(obj, "synthesis");
-
-	/*var sounds = [
-		'http://locus.creacast.com:9001/le-rove_niolon.mp3',
-		'http://locus.creacast.com:9001/acra_wave_farm.mp3',
-		'http://locus.creacast.com:9001/deptford_albany.mp3',
-		'sounds/banque/elements/eau.mp3', 
-		'sounds/banque/elements/feu.mp3',
-		'sounds/banque/elements/vent.mp3',
-		'sounds/banque/animaux/gibbon.mp3',
-		'sounds/banque/animaux/oiseaux01.mp3',
-		'sounds/banque/animaux/oiseaux02.mp3',
-		'sounds/banque/animaux/poules.mp3',
-		'sounds/banque/animaux/ronronment.mp3',
-		'sounds/banque/corps.mp3',
-		'sounds/banque/synthese/essorage_grave.mp3',
-		'sounds/banque/synthese/gresillements_guitare.mp3',
-		'sounds/banque/synthese/terre_gargouillante00.mp3'
-	];
-	*/
+	
 	fAudioSources.add(parameters, "source", na_library_sound);
 	fAudioSources.add(parameters, "createSource");
 	fAudioSources.add(parameters, "patch", na_library_patches);
@@ -1161,24 +1280,13 @@ function CreateGUI()
 	fBox.add(parameters, "box2");
 	fBox.add(parameters, "box3");
 
-	fSpace.add(parameters, "space1");
-	fSpace.add(parameters, "space2");
-	fSpace.add(parameters, "space3");	
-
+	fSpace.add(parameters, "ir", na_library_ir);
+	fSpace.add(parameters, "createResonator");
+	
+	
 	f3D.add(parameters, "object", na_library_objects);
 	f3D.add(parameters, "createObject");
 
-	//f3D.add(parameters, "cube");	
-	//f3D.add(parameters, "knot");
-	//f3D.add(parameters, "torus");	
-
-	
-	//gui.add(obj, 'name');
-	//gui.add(obj, 'URL');
-	//gui.add(obj, 'speed', -5, 5);
-	//gui.add(obj, 'displayOutline');
-	//gui.addColor(obj, 'color');
-	//gui.add(obj, 'update');
 	gui.add(parameters, 'destroyAll');
 	//gui.add(obj, 'volume', 0, 1);
 
@@ -1207,14 +1315,12 @@ Sky (à voir si c’est nécessaire, pourrait permettre de choisir différent gr
 	parameters.name = "name";
 	parameters.volume = 0.7;
 
-
 	// Iterate over all controllers
 	for (var i in gui.__controllers) {
 		gui.__controllers[i].updateDisplay();
 	}
 
 	gui.close();
-
 }
 
 //export { startDSP2 };
