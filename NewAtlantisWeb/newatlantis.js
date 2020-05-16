@@ -641,18 +641,18 @@ function createObject(o)
 			sound.play();
 			cube.add(sound);
 			cube.audio = sound;
-			/*Pd.receive('tick', function(args) 
+			Pd.receive('tick', function(args) 
 			{
-				console.log('received a message from "tick" : ', args);
+				//console.log('received a message from "tick" : ', args);
 				//" color.setHex( Math.random() * 0xffffff );
 				//selection.object3D.material.color.setHex(Math.random() * 0xffffff );
-				selection.remote.r = Math.random();
-				selection.remote.g = Math.random();
-				selection.remote.b = Math.random();
-				console.log("sending");
-				firebase.database().ref('spaces/test/objects/' + selection.remote.id).set(selection.remote);
+				cube.material.color.setHex(Math.random() * 0xffffff );
+				//o.r = Math.random();
+				//o.g = Math.random();
+				//o.b = Math.random();
+				//console.log("sending");
+				//firebase.database().ref('spaces/test/objects/' + o.id).set(o.remote);
 			});
-			*/
 		}
 		else
 		{
