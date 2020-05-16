@@ -49,9 +49,10 @@ var euler = new THREE.Euler(0, 0, 0, 'YXZ');
 
 var Inspector = function() 
 {
+	this.position = "";
 	this.distance = 400;
-	this.inclination = 0.49;
-	this.azimuth = 0.205;
+	this.inclination = 0.1; //0.49
+	this.azimuth = 0.985; //0.205
 
 	this.name = "untitled";
 	this.URL = 'http://locus.creacast.com:9001/le-rove_niolon.mp3';
@@ -202,6 +203,8 @@ for (var x=-200;x<=200;x+=100)
 camera.position.z = 0;
 camera.position.y = 3;
 
+camera.rotation.y = Math.PI/2;
+
 //var light = new THREE.PointLight(0xffffff, 1, 100);
 var light = new THREE.DirectionalLight( 0xffffff, 0.8 );
 //var light = new THREE.DirectionalLight( 0xffffff, 1.0 );
@@ -301,8 +304,14 @@ function AddGroundPlane(x,y,z,sizex, sizez)
 
 function animate() {
 	requestAnimationFrame(animate);
-	main_timer += 1/60;
-	water.material.uniforms[ 'time' ].value += 1.0 / 60.0;
+	var dt = 1/60;
+	main_timer += dt;
+	parameters.azimuth = parameters.azimuth+dt/360;
+	if (parameters.azimuth > 1)
+		parameters.azimuth -= 1;
+	updateSun();
+
+	water.material.uniforms[ 'time' ].value += dt;
 	if (MovingForward === true) {
 		moveCameraForward(avatar_speed);
 		avatar_dirty = true;
@@ -343,6 +352,7 @@ function animate() {
 	var send_interval = 0.05;
 	if (avatarname !== "" && avatar_dirty && main_timer > 3)
 	{
+		
 		send_timer += 1/60;
 		if (send_timer > send_interval)
 		{
@@ -367,7 +377,7 @@ function animate() {
 			obj.scale.x = 1;
 			obj.scale.y = 1;
 			obj.scale.z = 1;
-
+			parameters.position = ""+roundDown(obj.x, 2)+";"+roundDown(obj.y,2)+";"+roundDown(obj.z,2);
 			firebase.database().ref('spaces/test/objects/' + avatarname).set(obj);
 		}
 	}
@@ -447,6 +457,12 @@ var isInside = bb.containsPoint(inversePoint);
 }
 
 animate();
+
+
+function roundDown(number, decimals) {
+    decimals = decimals || 0;
+    return ( Math.floor( number * Math.pow(10, decimals) ) / Math.pow(10, decimals) );
+}
 
 //creates a new atlantis object (on database demand)
 function createObject(o) 
@@ -1227,7 +1243,7 @@ function ActionSound(url)
 function ActionResonator(ir)
 {
 	var obj= getNewObjectCommand("resonator");
-	obj.name = "resonator";
+	obj.name = ir;
 	obj.ir = ir;
 	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
 }
@@ -1267,7 +1283,7 @@ function CreateGUI()
 
 	var folder = gui.addFolder( 'Sky' );
 	folder.add( parameters, 'inclination', 0, 0.5, 0.0001 ).onChange( updateSun );
-	folder.add( parameters, 'azimuth', 0, 1, 0.0001 ).onChange( updateSun );
+	folder.add( parameters, 'azimuth', 0, 1, 0.0001 ).onChange( updateSun ).listen();
 	
 	fAudioSources.add(parameters, "source", na_library_sound);
 	fAudioSources.add(parameters, "createSource");
@@ -1288,6 +1304,8 @@ function CreateGUI()
 	f3D.add(parameters, "createObject");
 
 	gui.add(parameters, 'destroyAll');
+	gui.add(parameters, 'position').listen();
+	
 	//gui.add(obj, 'volume', 0, 1);
 
 /*

@@ -70,14 +70,18 @@ var na_library_ir = {
 	ir_19_jobin:'IR/19_jobin.wav',
 	ir_20_decent_vers_dome:'IR/20_decent_vers_dome.wav',
 	ir_21_etage_access_grandes_tables:'IR/21_etage_access_grandes_tables.wav',
-	ir_22_francois_simon_haut:'IR/22_francois_simon_haut.wav'
+	ir_22_francois_simon_haut:'IR/22_francois_simon_haut.wav',
+	ir_nancy_lake_tunnel:'IR/NancyLakeTunnel.wav'
 
 };
 
 
 var na_library_patches = 
 {
-	pd_input_modulation:'pd/adc_osc.pd'
+	pd_input_modulation:'pd/adc_osc.pd',
+	//pd_delays:'pd/delays.pd',
+	pd_metro:'pd/metro.pd'
+
 
 };
 
