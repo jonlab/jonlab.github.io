@@ -28,9 +28,10 @@ canvas {
 
 #info {
 	position: absolute;
-	top: 0px;
+	bottom: 0px; 
 	width: 100%;
-	padding: 10px;
+	height: 200px;
+	padding: 0px;
 	box-sizing: border-box;
 	text-align: center;
 	-moz-user-select: none;
@@ -39,6 +40,7 @@ canvas {
 	user-select: none;
 	pointer-events: none;
 	z-index: 1; /* TODO Solve this in HTML */
+	opacity: 0.5;
 }
 
 a, button, input, select {

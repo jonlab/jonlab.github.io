@@ -1,6 +1,8 @@
 import { GLTFLoader } from './examples/jsm/loaders/GLTFLoader.js';
 import { Water } from './examples/jsm/objects/Water.js';
 import { Sky } from './examples/jsm/objects/Sky.js';
+import Stats from './examples/jsm/libs/stats.module.js';
+
 
 /**
  * NEW ATLANTIS WEB POC
@@ -45,6 +47,10 @@ var fogColor;
 var vec = new THREE.Vector3();
 var dir = new THREE.Vector3();
 var euler = new THREE.Euler(0, 0, 0, 'YXZ');
+var ctx;
+//var canvas_log = document.getElementById('log');
+
+
 
 
 var Inspector = function() 
@@ -152,6 +158,20 @@ var Inspector = function()
   parameters = new Inspector();
 
 
+var logx = 0;
+var logy = 10;
+function Log(message) 
+{
+	if (logy>200-10)
+	{
+		ctx.fillStyle = '#000';
+		ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+		logy = 10;
+	}
+	ctx.fillStyle = '#FFF';
+	ctx.fillText(message, logx, logy );
+	logy+=10;
+}
 
 function onWindowResize() {
 	var height = window.innerHeight;
@@ -173,6 +193,11 @@ Pd.send('diam', [200]);
 patch = Pd.loadPatch(mainStr);
 webPd.patchLoaded(mainStr);
 })*/
+
+
+var stats = new Stats();
+stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+document.body.appendChild( stats.dom );
 
 scene = new THREE.Scene();
 camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -217,6 +242,9 @@ light.shadow.bias = 0.0001;
 light.shadow.mapSize.width = 1024;
 light.shadow.mapSize.height = 1024;
 scene.add(light);
+
+var axesHelper = new THREE.AxesHelper(1);
+scene.add(axesHelper);
 
 // Water
 var waterGeometry = new THREE.PlaneBufferGeometry( 10000, 10000 );
@@ -303,7 +331,8 @@ function AddGroundPlane(x,y,z,sizex, sizez)
 }
 
 function animate() {
-	requestAnimationFrame(animate);
+	
+	stats.begin();
 	var dt = 1/60;
 	main_timer += dt;
 	parameters.azimuth = parameters.azimuth+dt/360;
@@ -411,6 +440,9 @@ function animate() {
 							{
 								o.object3D.audio.gain.disconnect();
 								o.object3D.audio.gain.connect( r.object3D.convolver);
+								o.object3D.material.emissive.set( 0x77777777 );
+
+
 							}
 						}
 					}	
@@ -421,6 +453,7 @@ function animate() {
 						{
 							o.object3D.audio.gain.disconnect();
 							o.object3D.audio.gain.connect(o.object3D.audio.listener.getInput());
+							o.object3D.material.emissive.set( 0x00000000 );
 						}
 						
 					
@@ -454,6 +487,9 @@ var isInside = bb.containsPoint(inversePoint);
 
 
 	renderer.render(scene, camera);
+
+	stats.end();
+	requestAnimationFrame(animate);
 }
 
 animate();
@@ -480,7 +516,8 @@ function createObject(o)
 	}
 	else
 	{
-		console.log("create object "+ o.kind);
+		Log("create object "+ o.kind);
+		//console.log("create object "+ o.kind);
 		var geometry;
 		if (o.kind === "cube")
 		{
@@ -531,7 +568,7 @@ function createObject(o)
 		
 		if (o.kind === "box" || o.kind === "resonator")
 		{
-			material = new THREE.MeshStandardMaterial({transparent:true,opacity:0.5});
+			material = new THREE.MeshStandardMaterial({transparent:true,opacity:0.5, roughness:0.0});
 		}
 		else
 		{
@@ -617,14 +654,15 @@ function createObject(o)
 			var sound = new THREE.PositionalAudio( listener );
 			try
 			{
+				Log("read pd patch...");
 				console.log("read pd patch:", o.pd);
 				patch = Pd.loadPatch(o.pd);
 				//Pd.start();
-				console.log("loaded patch:", patch);
+				//console.log("loaded patch:", patch);
 				var out = patch.o(0);
-				console.log("out:", out);
+				//console.log("out:", out);
 				var outnode = patch.o(0).getOutNode();
-				console.log("out node", outnode);
+				//console.log("out node", outnode);
 				//patch.o(0).setWaa(Pd.getAudio().context.createGain(), 0);
 				if (outnode !== undefined)
 				{
@@ -633,6 +671,7 @@ function createObject(o)
 			}
 			catch (exception)
 			{
+				Log("PD patch loading exception:" + exception);
 				console.log("PD patch loading exception:", exception);
 			}
 			sound.setRefDistance( 1 );
@@ -653,6 +692,33 @@ function createObject(o)
 				//console.log("sending");
 				//firebase.database().ref('spaces/test/objects/' + o.id).set(o.remote);
 			});
+
+			Pd.receive('metroTime', function(args) 
+			{
+				//console.log("metroTime:", args)
+				//cube.scale.z = args[0]/100;
+			});
+			
+
+			Pd.receive('FmCarrier', function(args) 
+			{
+				//console.log("FmCarrier:", args)
+				//cube.scale.y = args[0]/100;
+				//cube.material.color.g = args[0]/100;
+			});
+
+			Pd.receive('FmMod', function(args) 
+			{
+				//console.log("FmMod:", args)
+				//cube.scale.x = args[0];
+
+			});
+			
+			
+
+			
+			
+			
 		}
 		else
 		{
@@ -698,6 +764,7 @@ function createObject(o)
 				var audioLoader = new THREE.AudioLoader();
 				audioLoader.load( o.url, function( buffer ) {
 					console.log("LOADED!", buffer);
+					Log("loaded sound " + o.url);
 				sound.setBuffer( buffer );
 				sound.setLoop( true );
 				sound.setVolume( 0.5 );
@@ -736,6 +803,7 @@ function createObject(o)
 				var audioLoader = new THREE.AudioLoader();
 				audioLoader.load( o.ir, function( buffer ) {
 					console.log("LOADED!", buffer);
+					Log("loaded IR " + o.ir);
 					cube.convolver.buffer = buffer;
 				});
 				sound.setRefDistance( 1 );
@@ -776,7 +844,6 @@ function openFile(event) {
 	};
 	reader.readAsText(input.files[0]);
 }
-
 
 function moveCameraForward(distance) {
 
@@ -852,8 +919,9 @@ function onMouseMove(event) {
 }
 
 
-function handleStart()
+function handleStart(event)
 {
+	//console.log(event);
 
 }
 
@@ -906,6 +974,10 @@ function getNewObjectCommand(kind)
 		obj.scale.x = 10;
 		obj.scale.y = 6;
 		obj.scale.z = 8;
+		obj.rotation.x = 0;
+		obj.rotation.y = 0;
+		obj.rotation.z = 0;
+
 	}
 	else
 	{
@@ -925,6 +997,16 @@ inputFile.onchange = openFile;
 
 function StartDSP()
 {
+	ctx = document.createElement('canvas').getContext('2d');
+	document.getElementById('info').appendChild(ctx.canvas);
+	ctx.canvas.width = window.innerWidth;
+	ctx.canvas.height = 200;
+	ctx.fillStyle = '#000';
+	ctx.strokeStyle = '#FFF';
+	ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+
+	Log("Welcome to New Atlantis...");
 	Login();
 	var overlay = document.getElementById( 'overlay' );
 	overlay.remove();
@@ -1259,6 +1341,7 @@ function ActionResonator(ir)
 
 function DeleteCurrentSelection()
 {
+	Log("delete object " + selection.remote.name + "(" + selection.remote.kind + ")");
 	firebase.database().ref('spaces/test/objects/' + selection.remote.id).remove();
 	selection = undefined;
 	object_selection = undefined;
@@ -1340,5 +1423,7 @@ Sky (à voir si c’est nécessaire, pourrait permettre de choisir différent gr
 
 	gui.close();
 }
+
+
 
 //export { startDSP2 };
