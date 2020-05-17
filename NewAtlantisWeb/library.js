@@ -71,7 +71,30 @@ var na_library_ir = {
 	ir_20_decent_vers_dome:'IR/20_decent_vers_dome.wav',
 	ir_21_etage_access_grandes_tables:'IR/21_etage_access_grandes_tables.wav',
 	ir_22_francois_simon_haut:'IR/22_francois_simon_haut.wav',
-	ir_nancy_lake_tunnel:'IR/NancyLakeTunnel.wav'
+	ir_nancy_lake_tunnel:'IR/NancyLakeTunnel.wav',
+	cathedrale_st_pierre_2:'IR/IR_files/cathedrale_st_pierre_2.wav',
+	cathedrale_st_pierre:'IR/IR_files/cathedrale_st_pierre.wav',
+	niolon_1:'IR/IR_files/niolon_1.wav',
+	niolon_3:'IR/IR_files/niolon_3.wav',
+	niolon_fort_grande_cave_1:'IR/IR_files/niolon_fort_grande_cave_1.wav',
+	niolon_fort_grande_cave_2:'IR/IR_files/niolon_fort_grande_cave_2.wav',
+	niolon_fort_observatoire_1_mono:'IR/IR_files/niolon_fort_observatoire_1_mono.wav',
+	niolon_fort_observatoire_1_stereo_large:'IR/IR_files/niolon_fort_observatoire_1_stereo_large.wav',
+	niolon_fort_observatoire_2:'IR/IR_files/niolon_fort_observatoire_2.wav',
+	niolon_fort_petite_salle:'IR/IR_files/niolon_fort_petite_salle.wav',
+	niolon_tunnel:'IR/IR_files/niolon_tunnel.wav',
+	niolon_valee_2:'IR/IR_files/niolon_valee_2.wav',
+	niolon_valee:'IR/IR_files/niolon_valee.wav',
+	panacee_cagedescaliers_2_mono:'IR/IR_files/panacee_cagedescaliers_2_mono.wav',
+	panacee_cagedescaliers_2:'IR/IR_files/panacee_cagedescaliers_2.wav',
+	salon_35_faubourg_du_courreau:'IR/IR_files/salon_35_faubourg_du_courreau.wav',
+	theatre_vignette_zoom_1_widestereo:'IR/IR_files/theatre_vignette_zoom_1_widestereo.wav',
+	theatre_vignette_zoom_1:'IR/IR_files/theatre_vignette_zoom_1.wav',
+	theatre_vignette_zoom_2:'IR/IR_files/theatre_vignette_zoom_2.wav',
+	theatre_vignette_zoom_3:'IR/IR_files/theatre_vignette_zoom_3.wav',
+	theatre_vignette_zoom_4:'IR/IR_files/theatre_vignette_zoom_4.wav'
+
+	
 
 };
 
@@ -80,7 +103,9 @@ var na_library_patches =
 {
 	pd_input_modulation:'pd/adc_osc.pd',
 	//pd_delays:'pd/delays.pd',
-	pd_metro:'pd/metro.pd'
+	pd_metro:'pd/metro.pd',
+	FmBass:'pd/FmBass.pd',
+	Square:'pd/Square.pd'
 
 
 };

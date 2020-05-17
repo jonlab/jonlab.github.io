@@ -682,7 +682,7 @@ function createObject(o)
 			cube.audio = sound;
 			Pd.receive('tick', function(args) 
 			{
-				//console.log('received a message from "tick" : ', args);
+				//console.log('received a message from "tick" : ', args, cube);
 				//" color.setHex( Math.random() * 0xffffff );
 				//selection.object3D.material.color.setHex(Math.random() * 0xffffff );
 				cube.material.color.setHex(Math.random() * 0xffffff );
@@ -1136,6 +1136,8 @@ function StartDSP()
 			case 8: //backspace
 				DeleteCurrentSelection();
 			break;
+			case 13: //enter
+			SendMessageToCurrentSelection();
 			case 16: //shift
 				avatar_speed = 0.5;
 			break;
@@ -1348,6 +1350,13 @@ function DeleteCurrentSelection()
 	ObjectDrag = false;
 
 }
+
+function SendMessageToCurrentSelection()
+{
+	Pd.send('diam', [200]);
+}
+
+
 
 
 
