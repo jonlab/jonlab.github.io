@@ -229,6 +229,9 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 //renderer.shadowMap.type = THREE.BasicShadowMap;
 document.body.appendChild(renderer.domElement);
+renderer.domElement.ondrop = OnDrop;
+renderer.domElement.ondragover = OnDragOver;
+
 
 
 fogColor = new THREE.Color(0x001133);
@@ -906,31 +909,8 @@ function uuidv4() {
 }
 
 function openFileAudio(event) {
-	var input = event.target;
-	var file = input.files[0];
-	var storage = firebase.storage();
-	var storageRef = storage.ref(); // Create a storage reference from our storage service
-	var audioRef = storageRef.child('audiofiles');
-	var fileRef = audioRef.child(uuidv4());
-
-	var url = fileRef.fullPath;
-	Log("uploading to " + url);
-	fileRef.put(file).then(function(snapshot) 
-	{
-		console.log('Uploaded a blob or file! ');			
-		var obj= getNewObjectCommand("sound");
-		fileRef.getDownloadURL().then(function(url) {
-			obj.url = url;
-			obj.name = "audio file";
-			firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
-		}).catch(function(error) {
-			// Handle any errors
-		  });
-		  
-		
-	});
-	
-	
+	var file = event.target.files[0];
+	uploadAudioFile(file);
 }
 
 
@@ -957,6 +937,39 @@ function openFile(event) {
 		firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
 	};
 	reader.readAsText(input.files[0]);
+}
+
+
+function uploadAudioFile(file, worldposition)
+{
+	
+	var storage = firebase.storage();
+	var storageRef = storage.ref(); // Create a storage reference from our storage service
+	var audioRef = storageRef.child('audiofiles');
+	var fileRef = audioRef.child(uuidv4());
+
+	var url = fileRef.fullPath;
+	Log("uploading to " + url);
+	fileRef.put(file).then(function(snapshot) 
+	{
+		console.log('Uploaded a blob or file! ');			
+		var obj= getNewObjectCommand("sound");
+		if (worldposition !== undefined)
+		{
+			obj.x = worldposition.x;
+			obj.y = worldposition.y;
+			obj.z = worldposition.z;
+		}
+		fileRef.getDownloadURL().then(function(url) {
+			obj.url = url;
+			obj.name = "audio file";
+			firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
+		}).catch(function(error) {
+			// Handle any errors
+		  });
+		  
+		
+	});
 }
 
 function moveCameraForward(distance) {
@@ -1592,6 +1605,64 @@ Sky (à voir si c’est nécessaire, pourrait permettre de choisir différent gr
 	gui.close();
 }
 
+function OnDrop(ev)
+{
+	ev.preventDefault();
+	console.log("ondrop", ev);
+	if (ev.dataTransfer.items) 
+	{
+		// Use DataTransferItemList interface to access the file(s)
+		for (var i = 0; i < ev.dataTransfer.items.length; i++) 
+		{
+		  // If dropped items aren't files, reject them
+		  if (ev.dataTransfer.items[i].kind === 'file') 
+		  {
+			var file = ev.dataTransfer.items[i].getAsFile();
 
 
-//export { startDSP2 };
+			//picking
+			mouse.x = ( ev.clientX / window.innerWidth ) * 2 - 1;
+			mouse.y = - ( ev.clientY / window.innerHeight ) * 2 + 1;
+			raycaster.setFromCamera( mouse, camera );
+
+			var intersections = raycaster.intersectObjects( objects, true );
+			//console.log("intersection=" , intersections);
+			var spawn_position = new THREE.Vector3();
+			if ( intersections.length > 0 ) 
+			{
+				spawn_position = intersections[ 0 ].point;
+				
+			}
+			else
+			{
+				spawn_position = raycaster.ray.origin.clone();
+				spawn_position.addScaledVector(raycaster.ray.direction, 10);
+				
+			}
+			//according to the extension...
+			uploadAudioFile(file, spawn_position);
+
+			
+			
+		  }
+		}
+	  } 
+	  else 
+	  {
+		// Use DataTransfer interface to access the file(s)
+		for (var i = 0; i < ev.dataTransfer.files.length; i++) {
+		  console.log('... file[' + i + '].name = ' + ev.dataTransfer.files[i].name);
+		}
+	  }
+
+
+
+
+}
+
+function OnDragOver(ev)
+{
+
+	ev.preventDefault();
+    return false;
+}
