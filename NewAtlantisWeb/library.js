@@ -37,14 +37,15 @@ var na_library_sound = {
 };
 
 var na_library_objects = {
+	duck:'duck',
 	cube:'cube',
 	sphere:'sphere',
 	torus:'torus',
 	box:'box',
 	knot:'knot',
 	cylinder:'cylinder',
-	cone:'cone'
-
+	cone:'cone',
+	island:'island'
 };
 
 var na_library_ir = {

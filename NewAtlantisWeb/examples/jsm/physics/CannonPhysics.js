@@ -84,11 +84,11 @@ function CannonPhysics() {
 		if ( shape !== null ) {
 
 			if ( mesh.isInstancedMesh ) {
-
+				//console.log("instance");
 				handleInstancedMesh( mesh, mass, shape );
 
 			} else if ( mesh.isMesh ) {
-
+				//console.log("mesh");
 				handleMesh( mesh, mass, shape );
 
 			}

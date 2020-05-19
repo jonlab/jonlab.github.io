@@ -2,8 +2,10 @@ import { GLTFLoader } from './examples/jsm/loaders/GLTFLoader.js';
 import { Water } from './examples/jsm/objects/Water.js';
 import { Sky } from './examples/jsm/objects/Sky.js';
 import Stats from './examples/jsm/libs/stats.module.js';
+import { CannonPhysics } from './examples/jsm/physics/CannonPhysics.js';
 
 
+const PhysicsEnabled = false;
 /**
  * NEW ATLANTIS WEB POC
  */
@@ -14,9 +16,14 @@ var MovingLeft = false;
 var MovingRight = false;
 var MouseDrag = false;
 var ObjectDrag = false;
+
+
 var scene; //Three js 3D scene
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
+
+var physics;
+
 var avatarname = "";
 var main_timer = 0;
 var send_timer = 0;
@@ -103,6 +110,11 @@ var Inspector = function()
 	this.loadPatch = function()
 	{
 		inputFile.click();
+	};
+
+	this.loadAudioFile = function()
+	{
+		inputFileAudio.click();
 	};
 
 	this.recorder = function() {
@@ -194,6 +206,10 @@ patch = Pd.loadPatch(mainStr);
 webPd.patchLoaded(mainStr);
 })*/
 
+if (PhysicsEnabled)
+{
+	physics = new CannonPhysics();
+}
 
 var stats = new Stats();
 stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
@@ -267,6 +283,8 @@ water = new Water(
 water.rotation.x = - Math.PI / 2;
 water.position.y = 0;
 scene.add( water );
+if (PhysicsEnabled)
+	physics.addMesh( water);
 
 // Skybox
 var sky = new Sky();
@@ -317,7 +335,7 @@ function Login()
 
 function AddGroundPlane(x,y,z,sizex, sizez)
 {
-	var geometryPlane = new THREE.PlaneGeometry(sizex, sizez, 10, 10);
+	var geometryPlane = new THREE.PlaneBufferGeometry(sizex, sizez, 10, 10);
 	var materialPlane = new THREE.MeshStandardMaterial({ color: 0x00ff00, side: THREE.DoubleSide });
 	var plane = new THREE.Mesh(geometryPlane, materialPlane);
 	//plane.setRotationFromEuler(0,0,0);
@@ -327,6 +345,8 @@ function AddGroundPlane(x,y,z,sizex, sizez)
 	plane.position.x = x;
 	plane.position.y = y;
 	plane.position.z = z;
+	if (PhysicsEnabled)
+		physics.addMesh( plane);
 	scene.add(plane);
 }
 
@@ -376,7 +396,7 @@ function animate() {
 		scene.fog = undefined;*/
 	}
 	
-
+	parameters.position = ""+roundDown(camera.position.x, 2)+";"+roundDown(camera.position.y,2)+";"+roundDown(camera.position.z,2);
 	//send avatar position to the server
 	var send_interval = 0.05;
 	if (avatarname !== "" && avatar_dirty && main_timer > 3)
@@ -406,7 +426,7 @@ function animate() {
 			obj.scale.x = 1;
 			obj.scale.y = 1;
 			obj.scale.z = 1;
-			parameters.position = ""+roundDown(obj.x, 2)+";"+roundDown(obj.y,2)+";"+roundDown(obj.z,2);
+			//parameters.position = ""+roundDown(obj.x, 2)+";"+roundDown(obj.y,2)+";"+roundDown(obj.z,2);
 			firebase.database().ref('spaces/test/objects/' + avatarname).set(obj);
 		}
 	}
@@ -504,32 +524,22 @@ function roundDown(number, decimals) {
 function createObject(o) 
 {
 	var cube;
-	if (o.kind === "duck")
-	{
-		gltfLoader.load( 'models/Duck.glb', function ( gltf ) 
-		{
-			//gltf.scene.scale.set(0.01,0.01,0.01);
-			scene.add( gltf.scene);
-		}, undefined, function ( error ) {
-			console.error( error );
-		} );
-	}
-	else
-	{
+	
+	
 		Log("create object "+ o.kind);
 		//console.log("create object "+ o.kind);
 		var geometry;
 		if (o.kind === "cube")
 		{
-			geometry = new THREE.BoxGeometry();
+			geometry = new THREE.BoxBufferGeometry();
 		}
 		else if (o.kind === "box")
 		{
-			geometry = new THREE.BoxGeometry();
+			geometry = new THREE.BoxBufferGeometry();
 		}
 		else if (o.kind === "sphere")
 		{
-			geometry = new THREE.SphereGeometry(1,20,20);
+			geometry = new THREE.SphereBufferGeometry(1,20,20);
 		}
 		else if (o.kind === "avatar")
 		{
@@ -557,11 +567,15 @@ function createObject(o)
 		}
 		else if (o.kind === "resonator")
 		{
-			geometry = new THREE.BoxGeometry();
+			geometry = new THREE.BoxBufferGeometry(10,6,8);
+		}
+		else if (o.kind === "island")
+		{	
+			geometry = new THREE.CylinderGeometry( 40, 50, 2, 64 );
 		}
 		else 
 		{
-			geometry = new THREE.SphereGeometry(1,20,20);
+			geometry = new THREE.SphereBufferGeometry(1,20,20);
 		}
 		
 		var material = null;
@@ -575,7 +589,6 @@ function createObject(o)
 			material = new THREE.MeshStandardMaterial();
 		}
 		
-
 		cube = new THREE.Mesh(geometry, material);
 		cube.position.x = o.x;
 		cube.position.y = o.y;
@@ -618,7 +631,7 @@ function createObject(o)
 		{
 				var geometryText = new THREE.TextGeometry( display_text, {
 					font: font,
-					size: 30,
+					size: 20,
 					height: 0.5,
 					curveSegments: 2,
 					bevelEnabled: true,
@@ -628,10 +641,10 @@ function createObject(o)
 					bevelSegments: 5
 				} );
 
-				var materialText = new THREE.MeshStandardMaterial();
+				var materialText = new THREE.MeshPhongMaterial();
 				var text = new THREE.Mesh(geometryText, materialText);
 				cube.add(text);
-				text.scale.set(0.015,0.015,0.015);
+				text.scale.set(0.01,0.01,0.01);
 				text.position.y = 1.2;
 				text.rotation.y = Math.PI;
 				//console.log("text", text);
@@ -812,11 +825,65 @@ function createObject(o)
 				//sound.gain.connect( o.convolver);
 				cube.convolver.connect( sound.listener.getInput() );
 			}	
+			else if (o.kind === "duck")
+			{
+				material.visible = false;
+				gltfLoader.load( 'models/Duck.glb', function ( gltf ) 
+				{
+					//gltf.scene.scale.set(0.01,0.01,0.01);
+					cube.add( gltf.scene);
+				}, undefined, function ( error ) {
+					console.error( error );
+				} );
+			}
 			cube.add(sound);
 			cube.audio = sound;
 		}
-	}
+		//console.log("physics add mesh");
+		if (PhysicsEnabled)
+			physics.addMesh( cube, 1);
+		//var position = new THREE.Vector3();
+		//position.set( 0, Math.random() * 2, 0 );
+		//physics.setMeshPosition( cube, position );
 		return cube;
+}
+
+
+
+function uuidv4() {
+	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+	  var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+	  return v.toString(16);
+	});
+  }
+
+
+function openFileAudio(event) {
+	var input = event.target;
+	var file = input.files[0];
+	var storage = firebase.storage();
+	var storageRef = storage.ref(); // Create a storage reference from our storage service
+	var audioRef = storageRef.child('audiofiles');
+	var fileRef = audioRef.child(uuidv4());
+
+	var url = fileRef.fullPath;
+	Log("uploading to " + url);
+	fileRef.put(file).then(function(snapshot) 
+	{
+		console.log('Uploaded a blob or file! ');			
+		var obj= getNewObjectCommand("sound");
+		fileRef.getDownloadURL().then(function(url) {
+			obj.url = url;
+			obj.name = "audio file";
+			firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
+		}).catch(function(error) {
+			// Handle any errors
+		  });
+		  
+		
+	});
+	
+	
 }
 
 
@@ -872,11 +939,14 @@ function moveCameraForward(distance) {
 
 function UpdateSelection()
 {
-	selection.remote.x = object_selection.position.x;
-	selection.remote.y = object_selection.position.y;
-	selection.remote.z = object_selection.position.z;
-	//console.log("update selection", selection);
-	firebase.database().ref('spaces/test/objects/' + selection.remote.id).set(selection.remote);
+	if (selection !== undefined)
+	{
+		selection.remote.x = object_selection.position.x;
+		selection.remote.y = object_selection.position.y;
+		selection.remote.z = object_selection.position.z;
+		//console.log("update selection", selection);
+		firebase.database().ref('spaces/test/objects/' + selection.remote.id).set(selection.remote);
+	}
 }
 
 
@@ -914,6 +984,8 @@ function onMouseMove(event) {
 		object_selection.position.addScaledVector(vec, movementX*0.02);
 		//camera.getWorldUp(dir);
 		object_selection.position.addScaledVector(camera.up, movementY*-0.02);
+		if (PhysicsEnabled)
+			physics.setMeshPosition( object_selection, object_selection.position );
 		UpdateSelection();
 	}
 }
@@ -971,12 +1043,23 @@ function getNewObjectCommand(kind)
 	obj.scale = {};
 	if (kind === "box" || kind === "resonator")
 	{
-		obj.scale.x = 10;
-		obj.scale.y = 6;
-		obj.scale.z = 8;
+		//obj.scale.x = 10;
+		//obj.scale.y = 6;
+		//obj.scale.z = 8;
 		obj.rotation.x = 0;
 		obj.rotation.y = 0;
 		obj.rotation.z = 0;
+
+	}
+	if (kind === "island")
+	{
+		obj.y = 0;
+		obj.rotation.x = 0;
+		obj.rotation.y = 0;
+		obj.rotation.z = 0;
+		obj.r = 1;
+		obj.g = 1;
+		obj.b = 0.7;
 
 	}
 	else
@@ -995,8 +1078,15 @@ inputFile.type = "file";
 inputFile.id = 'pd';
 inputFile.onchange = openFile;
 
+var inputFileAudio = document.createElement("input");
+inputFileAudio.type = "file";
+inputFileAudio.id = 'wav';
+inputFileAudio.onchange = openFileAudio;
+
+
 function StartDSP()
 {
+	//log canvas
 	ctx = document.createElement('canvas').getContext('2d');
 	document.getElementById('info').appendChild(ctx.canvas);
 	ctx.canvas.width = window.innerWidth;
@@ -1005,9 +1095,9 @@ function StartDSP()
 	ctx.strokeStyle = '#FFF';
 	ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-
 	Log("Welcome to New Atlantis...");
 	Login();
+	//overlay
 	var overlay = document.getElementById( 'overlay' );
 	overlay.remove();
 
@@ -1018,7 +1108,14 @@ function StartDSP()
 	Pd.start(options);
 
 	// Initialize Firebase
+	
 	firebase.initializeApp(firebaseConfig);
+	firebase.auth().signInAnonymously().catch(function(error) {
+		// Handle Errors here.
+		var errorCode = error.code;
+		var errorMessage = error.message;
+		// ...
+	  });
 	firebase.analytics();
 	//console.log("firebase", firebase);
 	var val = Math.random();
@@ -1042,10 +1139,22 @@ function StartDSP()
 		{
 			ObjectDrag = true;
 			object_selection = intersections[ 0 ].object;
-			object_selection.material.emissive.set( 0xaaaaaaaa );
-			selection = objects_main[object_selection.uuid];
-			//console.log("selection set to:", selection);
 			
+			selection = objects_main[object_selection.uuid];
+
+			if (selection.remote.kind === "island")
+			{
+				//non draggable
+				object_selection = undefined;
+				selection = undefined;
+				ObjectDrag = false;
+				MouseDrag = true;
+			}
+			else
+			{
+				object_selection.material.emissive.set( 0xaaaaaaaa );
+			}
+			//console.log("selection set to:", selection);
 			/*
 			if ( group.children.includes( object ) === true ) {
 				object.material.emissive.set( 0x000000 );
@@ -1137,7 +1246,9 @@ function StartDSP()
 				DeleteCurrentSelection();
 			break;
 			case 13: //enter
-			SendMessageToCurrentSelection();
+			//SendMessageToCurrentSelection();
+			parameters.createObject();
+			break;
 			case 16: //shift
 				avatar_speed = 0.5;
 			break;
@@ -1182,18 +1293,11 @@ objectsRef.on('child_added', function (snapshot) {
 
 	var newobj = {};
 	newobj.remote = object;
-	
 	newobj.object3D = createObject(object);
-	
-	/*if (object.pd !== undefined)
-	{
-		console.log("object created : ", newobj);
-	}*/
 	objects.push(newobj.object3D);
 	objects_main[newobj.object3D.uuid] = newobj;
-	selection = newobj;
+	//selection = newobj;
 	space_objects[object.id] = newobj;
-
 	if (object.id === avatarname)
 	{
 		//this avatar, we update camera
@@ -1204,7 +1308,6 @@ objectsRef.on('child_added', function (snapshot) {
 		camera.rotation.y = object.rotation.y;
 		camera.rotation.z = object.rotation.z;
 	}
-
 });
 
 objectsRef.on('child_removed', function (snapshot) {
@@ -1379,6 +1482,7 @@ function CreateGUI()
 	
 	fAudioSources.add(parameters, "source", na_library_sound);
 	fAudioSources.add(parameters, "createSource");
+	fAudioSources.add(parameters, "loadAudioFile");
 	fAudioSources.add(parameters, "patch", na_library_patches);
 	fAudioSources.add(parameters, "createPatch");
 	fAudioSources.add(parameters, "loadPatch");
