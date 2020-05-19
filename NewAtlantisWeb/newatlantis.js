@@ -117,6 +117,11 @@ var Inspector = function()
 		inputFileAudio.click();
 	};
 
+	this.loadModelFile = function()
+	{
+		inputFileModel.click();
+	};
+
 	this.recorder = function() {
 		alert("recorder");
 	}; 
@@ -836,6 +841,19 @@ function createObject(o)
 					console.error( error );
 				} );
 			}
+			else if (o.kind === "model")
+			{
+				material.visible = false;
+				gltfLoader.load( o.url, function ( gltf ) 
+				{
+					//gltf.scene.scale.set(0.01,0.01,0.01);
+					cube.add( gltf.scene);
+				}, undefined, function ( error ) {
+					console.error( error );
+				} );
+			}
+
+
 			cube.add(sound);
 			cube.audio = sound;
 		}
@@ -857,6 +875,35 @@ function uuidv4() {
 	});
   }
 
+
+
+  function openFileModel(event) {
+	var input = event.target;
+	var file = input.files[0];
+	var storage = firebase.storage();
+	var storageRef = storage.ref(); // Create a storage reference from our storage service
+	var audioRef = storageRef.child('models');
+	var fileRef = audioRef.child(uuidv4());
+
+	var url = fileRef.fullPath;
+	Log("uploading to " + url);
+	fileRef.put(file).then(function(snapshot) 
+	{
+		console.log('Uploaded a blob or file! ');			
+		var obj= getNewObjectCommand("model");
+		fileRef.getDownloadURL().then(function(url) {
+			obj.url = url;
+			obj.name = "model";
+			firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
+		}).catch(function(error) {
+			// Handle any errors
+		  });
+		  
+		
+	});
+	
+	
+}
 
 function openFileAudio(event) {
 	var input = event.target;
@@ -1082,6 +1129,13 @@ var inputFileAudio = document.createElement("input");
 inputFileAudio.type = "file";
 inputFileAudio.id = 'wav';
 inputFileAudio.onchange = openFileAudio;
+
+var inputFileModel = document.createElement("input");
+inputFileModel.type = "file";
+inputFileModel.id = '3d';
+inputFileModel.onchange = openFileModel;
+
+
 
 
 function StartDSP()
@@ -1498,6 +1552,7 @@ function CreateGUI()
 	
 	f3D.add(parameters, "object", na_library_objects);
 	f3D.add(parameters, "createObject");
+	f3D.add(parameters, "loadModelFile");
 
 	gui.add(parameters, 'destroyAll');
 	gui.add(parameters, 'position').listen();
