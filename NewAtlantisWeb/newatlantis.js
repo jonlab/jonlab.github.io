@@ -221,7 +221,7 @@ stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
 document.body.appendChild( stats.dom );
 
 scene = new THREE.Scene();
-camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
 renderer = new THREE.WebGLRenderer();
 onWindowResize();
 renderer.setClearColor(new THREE.Color(0x0088ff), 1);
@@ -260,7 +260,7 @@ var light = new THREE.DirectionalLight( 0xffffff, 0.8 );
 //light = new THREE.SpotLight( 0xffffff, 1, 0, Math.PI / 5, 0.3 );
 light.position.set(10,30, 0);
 light.castShadow = true;
-light.shadow.camera.near = 0.01;
+light.shadow.camera.near = 0.1;
 light.shadow.camera.far = 1000;
 light.shadow.bias = 0.0001;
 light.shadow.mapSize.width = 1024;
@@ -370,19 +370,19 @@ function animate() {
 
 	water.material.uniforms[ 'time' ].value += dt;
 	if (MovingForward === true) {
-		moveCameraForward(avatar_speed);
+		moveCameraForward(avatar_speed*dt);
 		avatar_dirty = true;
 	}
 	if (MovingBackward === true) {
-		moveCameraForward(-avatar_speed);
+		moveCameraForward(-avatar_speed*dt);
 		avatar_dirty = true;
 	}
 	if (MovingLeft === true) {
-		moveCameraRight(-avatar_speed);
+		moveCameraRight(-avatar_speed*dt);
 		avatar_dirty = true;
 	}
 	if (MovingRight === true) {
-		moveCameraRight(avatar_speed);
+		moveCameraRight(avatar_speed*dt);
 		avatar_dirty = true;
 	}
 
@@ -440,23 +440,18 @@ function animate() {
 	}
 
 	//apply reverb?
-
-
 	//compute all boxes
 	for (var j in space_objects)
 	{
-		
 		var r = space_objects[j];
 		if (r.remote.kind === "resonator")
 		{
-		
-			//check if sound inside box
+			//update bounding box
 			r.bb = new THREE.Box3();
 			r.object3D.geometry.computeBoundingBox();
 			r.bb.copy( r.object3D.geometry.boundingBox ).applyMatrix4( r.object3D.matrixWorld );
 		}
 	}
-
 
 	for (var i in space_objects)
 	{
@@ -464,15 +459,14 @@ function animate() {
 		o.convolver = undefined;
 		if (o.object3D.audio !== undefined && o.object3D.convolver === undefined )
 		{
-			
+			/*
 			if (o.object3D.audio.gain != undefined)
 			{
 				o.object3D.audio.gain.disconnect();
 				o.object3D.audio.gain.connect(o.object3D.audio.listener.getInput());
 				o.object3D.material.emissive.set( 0x00000000 );
 			}
-
-			//console.log("test BB", bb);
+			*/
 			for (var j in space_objects)
 			{
 				var r = space_objects[j];
@@ -480,11 +474,9 @@ function animate() {
 				{
 					//check if sound inside box
 					var isInside = r.bb.containsPoint(o.object3D.position);
-					
 					if (isInside && r.object3D.convolver !== undefined && o.object3D.audio.gain != undefined)
 					{
 						//we are inside a convolver zone
-
 						if (o.convolver !== undefined)
 						{
 							//we have to disconnect first
@@ -493,7 +485,6 @@ function animate() {
 						o.convolver = r.object3D.convolver;
 						o.object3D.audio.gain.connect( r.object3D.convolver);
 						o.object3D.material.emissive.set( 0x77777777 );
-
 					}	
 				}
 			}
@@ -509,38 +500,10 @@ function animate() {
 			o.object3D.audio.gain.disconnect();
 			o.object3D.audio.gain.connect(o.object3D.audio.listener.getInput());
 			o.object3D.material.emissive.set( 0x00000000 );
-
 		}
 	}
-	
-
-
-
-
-			
-			/*
-			var box = <Your non-aligned box>
-var point = <Your point>
-
-box.geometry.computeBoundingBox(); // This is only necessary if not allready computed
-box.updateMatrixWorld(true); // This might be necessary if box is moved
-var boxMatrixInverse = new THREE.Matrix4().getInverse(box.matrixWorld);
-var inverseBox = box.clone();
-var inversePoint = point.clone();
-inverseBox.applyMatrix(boxMatrixInverse);
-inversePoint.applyMatrix4(boxMatrixInverse);
-var bb = new THREE.Box3().setFromObject(inverseBox);
-var isInside = bb.containsPoint(inversePoint);
-*/
-
-		
-		//console.log("update " + o.object3D);
-
-	
-
 
 	renderer.render(scene, camera);
-
 	stats.end();
 	requestAnimationFrame(animate);
 }
@@ -813,7 +776,7 @@ function createObject(o)
 					Log("loaded sound " + o.url);
 				sound.setBuffer( buffer );
 				sound.setLoop( true );
-				sound.setVolume( 0.5 );
+				sound.setVolume(1);
 				sound.play();
 				});
 				//var mediaElement = new Audio(o.url);
@@ -821,25 +784,9 @@ function createObject(o)
 				//mediaElement.loop = true;
 				//mediaElement.play();
 				//sound.setMediaElementSource( mediaElement );
-				sound.setRefDistance( 1 );
-				sound.setRolloffFactor(1.2);
+				sound.setRefDistance(1);
+				sound.setRolloffFactor(1);
 				sound.setDistanceModel("exponential");
-				
-				/*
-				//test IR
-				var convolver = audioContext.createConvolver();
-				var irRRequest = new XMLHttpRequest();
-				irRRequest.open("GET", "IR/1_tunnel_souterrain.wav", true);
-				irRRequest.responseType = "arraybuffer";
-				irRRequest.onload = function() {
-					audioContext.decodeAudioData( irRRequest.response, 
-						function(buffer) { convolver.buffer = buffer; } );
-				}
-				irRRequest.send();
-				// note the above is async; when the buffer is loaded, it will take effect, but in the meantime, the sound will be unaffected.
-				sound.gain.connect( convolver);
-				convolver.connect( sound.listener.getInput() );
-				*/
 				
 			}	
 
@@ -1147,9 +1094,6 @@ function getNewObjectCommand(kind)
 	obj.scale = {};
 	if (kind === "box" || kind === "resonator")
 	{
-		//obj.scale.x = 10;
-		//obj.scale.y = 6;
-		//obj.scale.z = 8;
 		obj.rotation.x = 0;
 		obj.rotation.y = 0;
 		obj.rotation.z = 0;
@@ -1331,7 +1275,7 @@ function StartDSP()
 				MovingRight = false;
 				break;
 			case 16: //shift
-				avatar_speed = 0.1;
+				avatar_speed = 20;
 			break;
 		}
 	}, false);
@@ -1361,7 +1305,7 @@ function StartDSP()
 			parameters.createObject();
 			break;
 			case 16: //shift
-				avatar_speed = 0.5;
+				avatar_speed = 340;
 			break;
 		}
 
