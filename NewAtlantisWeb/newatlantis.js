@@ -139,7 +139,7 @@ var Inspector = function()
 		req.onload = function() 
 		{
 			var result = JSON.parse(req.response);
-			console.log("freesound returned:", result);
+			//console.log("freesound returned:", result);
 			var freesound_list = {};
 			for (var i in result.results)
 			{
