@@ -17,7 +17,13 @@ var MovingRight = false;
 var MouseDrag = false;
 var ObjectDrag = false;
 
-
+//freesound
+//https://freesound.org/docs/api/overview.html
+//https://freesound.org/apiv2/search/text/?query=piano&token=IcsqGmC1CiYHNtyWpZ4ETJFHb8OM5QhzZYb3AzGj
+//
+var baseurl_freesoundsearch = "https://freesound.org/apiv2/search/text/?token=IcsqGmC1CiYHNtyWpZ4ETJFHb8OM5QhzZYb3AzGj&fields=previews,description,name&query=";
+var controller_freesound;
+var controller_createfreesound;
 var scene; //Three js 3D scene
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
@@ -28,7 +34,7 @@ var avatarname = "";
 var main_timer = 0;
 var send_timer = 0;
 var avatar_dirty = false;
-var avatar_speed = 0.1;
+var avatar_speed = 20;
 
 var space_objects = [];  //overall objects
 var objects = []; //THREE objects
@@ -69,6 +75,7 @@ var Inspector = function()
 
 	this.name = "untitled";
 	this.URL = 'http://locus.creacast.com:9001/le-rove_niolon.mp3';
+	this.search = "seagull";
 	//this.speed = 0.8;
 	//this.displayOutline = false;
 	this.color = [ 0, 128, 255 ]; // RGB array
@@ -77,6 +84,7 @@ var Inspector = function()
 	this.object = "cube";
 	this.patch = "pd/adc_osc.pd";
 	this.ir = "IR/1_tunnel_souterrain.wav";
+	this.freesound = "";
 	this.update = function() {
 		alert("update");
 	};
@@ -87,6 +95,12 @@ var Inspector = function()
 	this.createSource = function()
 	{
 		var url = this.source;
+		ActionSound(url);
+	};
+
+	this.createFreesound = function()
+	{
+		var url = this.freesound;
 		ActionSound(url);
 	};
 
@@ -115,6 +129,35 @@ var Inspector = function()
 	this.loadAudioFile = function()
 	{
 		inputFileAudio.click();
+	};
+
+	this.searchFreesound = function()
+	{
+		var url = baseurl_freesoundsearch + this.search;
+		var req = new XMLHttpRequest();
+		req.open("GET", url, true);
+		req.onload = function() 
+		{
+			var result = JSON.parse(req.response);
+			console.log("freesound returned:", result);
+			var freesound_list = {};
+			for (var i in result.results)
+			{
+				var entry = result.results[i];
+				freesound_list[entry.name] = entry.previews['preview-hq-mp3'];
+				
+			}
+			
+			if (controller_freesound !== undefined)
+				controller_freesound.remove();
+			if (controller_createfreesound !== undefined)
+			controller_createfreesound.remove();
+			controller_freesound = fAudioSources.add(parameters, "freesound", freesound_list);
+			controller_createfreesound = fAudioSources.add(parameters, "createFreesound");
+			if (result.results.length > 0)
+				this.freesound = result.results[0].previews['preview-hq-mp3'];
+		}
+		req.send();
 	};
 
 	this.loadModelFile = function()
@@ -1517,6 +1560,11 @@ function SendMessageToCurrentSelection()
 
 
 
+var fAudioSources;
+var f3D;
+var fBox;
+var fSpace;
+
 
 function CreateGUI()
 {
@@ -1524,10 +1572,10 @@ function CreateGUI()
 	dat.GUI.TEXT_OPEN = "New Atlantis - Open controls";
 	
 	gui = new dat.GUI();
-	var fAudioSources = gui.addFolder('Audio Source');
-	var f3D = gui.addFolder('3D Object');
-	var fBox = gui.addFolder('Box (modifier) (not impl.)');
-	var fSpace = gui.addFolder('Space (resonator)');
+	fAudioSources = gui.addFolder('Audio Source');
+	f3D = gui.addFolder('3D Object');
+	fBox = gui.addFolder('Box (modifier) (not impl.)');
+	fSpace = gui.addFolder('Space (resonator)');
 
 
 
@@ -1542,6 +1590,11 @@ function CreateGUI()
 	fAudioSources.add(parameters, "createPatch");
 	fAudioSources.add(parameters, "loadPatch");
 
+	fAudioSources.add(parameters, "search");
+	fAudioSources.add(parameters, "searchFreesound");
+	
+	
+	
 
 	fBox.add(parameters, "box1");
 	fBox.add(parameters, "box2");
