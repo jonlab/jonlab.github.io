@@ -441,55 +441,80 @@ function animate() {
 
 	//apply reverb?
 
+
+	//compute all boxes
 	for (var j in space_objects)
 	{
+		
 		var r = space_objects[j];
 		if (r.remote.kind === "resonator")
 		{
-			var bb = new THREE.Box3();
+		
+			//check if sound inside box
+			r.bb = new THREE.Box3();
 			r.object3D.geometry.computeBoundingBox();
-			bb.copy( r.object3D.geometry.boundingBox ).applyMatrix4( r.object3D.matrixWorld );
-			//console.log("test BB", bb);
-			for (var i in space_objects)
+			r.bb.copy( r.object3D.geometry.boundingBox ).applyMatrix4( r.object3D.matrixWorld );
+		}
+	}
+
+
+	for (var i in space_objects)
+	{
+		var o = space_objects[i];
+		o.convolver = undefined;
+		if (o.object3D.audio !== undefined && o.object3D.convolver === undefined )
+		{
+			
+			if (o.object3D.audio.gain != undefined)
 			{
-				var o = space_objects[i];
-				if (o.object3D.audio !== undefined && o.object3D.convolver === undefined )
+				o.object3D.audio.gain.disconnect();
+				o.object3D.audio.gain.connect(o.object3D.audio.listener.getInput());
+				o.object3D.material.emissive.set( 0x00000000 );
+			}
+
+			//console.log("test BB", bb);
+			for (var j in space_objects)
+			{
+				var r = space_objects[j];
+				if (r.remote.kind === "resonator")
 				{
 					//check if sound inside box
+					var isInside = r.bb.containsPoint(o.object3D.position);
 					
-					var isInside = bb.containsPoint(o.object3D.position);
-					
-					if (isInside)
+					if (isInside && r.object3D.convolver !== undefined && o.object3D.audio.gain != undefined)
 					{
-						//console.log("INSIDE! connect ", o.object3D.audio.gain, r.object3D.convolver);
-						if (r.object3D.convolver !== undefined)
-						{
-							if (o.object3D.audio.gain != undefined)
-							{
-								o.object3D.audio.gain.disconnect();
-								o.object3D.audio.gain.connect( r.object3D.convolver);
-								o.object3D.material.emissive.set( 0x77777777 );
+						//we are inside a convolver zone
 
-
-							}
-						}
-					}	
-					else
-					{
-						//console.log("OUTSIDE!");
-						if (o.object3D.audio.gain != undefined)
+						if (o.convolver !== undefined)
 						{
+							//we have to disconnect first
 							o.object3D.audio.gain.disconnect();
-							o.object3D.audio.gain.connect(o.object3D.audio.listener.getInput());
-							o.object3D.material.emissive.set( 0x00000000 );
 						}
-						
-					
-					}
+						o.convolver = r.object3D.convolver;
+						o.object3D.audio.gain.connect( r.object3D.convolver);
+						o.object3D.material.emissive.set( 0x77777777 );
+
+					}	
 				}
 			}
 		}
 	}
+
+	for (var i in space_objects)
+	{
+		var o = space_objects[i];
+		//sources in free air, we disconnect
+		if (o.convolver === undefined && o.object3D.audio.gain != undefined)
+		{
+			o.object3D.audio.gain.disconnect();
+			o.object3D.audio.gain.connect(o.object3D.audio.listener.getInput());
+			o.object3D.material.emissive.set( 0x00000000 );
+
+		}
+	}
+	
+
+
 
 
 			
@@ -547,7 +572,7 @@ function createObject(o)
 		}
 		else if (o.kind === "sphere")
 		{
-			geometry = new THREE.SphereBufferGeometry(1,20,20);
+			geometry = new THREE.SphereBufferGeometry(0.5,20,20);
 		}
 		else if (o.kind === "avatar")
 		{
@@ -583,7 +608,7 @@ function createObject(o)
 		}
 		else 
 		{
-			geometry = new THREE.SphereBufferGeometry(1,20,20);
+			geometry = new THREE.SphereBufferGeometry(0.5,20,20);
 		}
 		
 		var material = null;
@@ -883,6 +908,12 @@ function uuidv4() {
   function openFileModel(event) {
 	var input = event.target;
 	var file = input.files[0];
+	uploadModelFile(file);
+}
+
+
+function uploadModelFile(file, worldposition, worldrotation)
+{
 	var storage = firebase.storage();
 	var storageRef = storage.ref(); // Create a storage reference from our storage service
 	var audioRef = storageRef.child('models');
@@ -894,6 +925,19 @@ function uuidv4() {
 	{
 		console.log('Uploaded a blob or file! ');			
 		var obj= getNewObjectCommand("model");
+		if (worldposition !== undefined)
+		{
+			obj.x = worldposition.x;
+			obj.y = worldposition.y;
+			obj.z = worldposition.z;
+		}
+
+		if (worldrotation !== undefined)
+		{
+			obj.rotation.x = worldrotation.x;
+			obj.rotation.y = worldrotation.y;
+			obj.rotation.z = worldrotation.z;
+		}
 		fileRef.getDownloadURL().then(function(url) {
 			obj.url = url;
 			obj.name = "model";
@@ -904,9 +948,9 @@ function uuidv4() {
 		  
 		
 	});
-	
-	
+
 }
+
 
 function openFileAudio(event) {
 	var file = event.target.files[0];
@@ -1619,7 +1663,7 @@ function OnDrop(ev)
 		  {
 			var file = ev.dataTransfer.items[i].getAsFile();
 
-
+			console.log("file" , file);
 			//picking
 			mouse.x = ( ev.clientX / window.innerWidth ) * 2 - 1;
 			mouse.y = - ( ev.clientY / window.innerHeight ) * 2 + 1;
@@ -1640,7 +1684,14 @@ function OnDrop(ev)
 				
 			}
 			//according to the extension...
-			uploadAudioFile(file, spawn_position);
+			if (file.name.endsWith('.glb'))
+			{
+				uploadModelFile(file, spawn_position, new THREE.Vector3(0,0,0));
+			}
+			else
+			{
+				uploadAudioFile(file, spawn_position);
+			}
 
 			
 			
