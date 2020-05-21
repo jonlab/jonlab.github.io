@@ -992,6 +992,7 @@ function uploadModelFile(file, worldposition, worldrotation)
 
 function openFileAudio(event) {
 	var file = event.target.files[0];
+	Log("try to upload " + file.name, 2);
 	uploadAudioFile(file);
 }
 
@@ -1697,6 +1698,7 @@ function OnDrop(ev)
 {
 	ev.preventDefault();
 	console.log("ondrop", ev);
+	
 	if (ev.dataTransfer.items) 
 	{
 		// Use DataTransferItemList interface to access the file(s)
@@ -1706,7 +1708,7 @@ function OnDrop(ev)
 		  if (ev.dataTransfer.items[i].kind === 'file') 
 		  {
 			var file = ev.dataTransfer.items[i].getAsFile();
-
+			Log("dropped " + file.name, 2);
 			console.log("file" , file);
 			//picking
 			mouse.x = ( ev.clientX / window.innerWidth ) * 2 - 1;
