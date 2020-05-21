@@ -34,7 +34,7 @@ var avatarname = "";
 var main_timer = 0;
 var send_timer = 0;
 var avatar_dirty = false;
-var avatar_speed = 20;
+var avatar_speed = 5;
 
 var space_objects = [];  //overall objects
 var objects = []; //THREE objects
@@ -68,11 +68,13 @@ var ctx;
 
 var Inspector = function() 
 {
+	this.editMode = false;
 	this.position = "";
+	
 	this.distance = 400;
 	this.inclination = 0.1; //0.49
 	this.azimuth = 0.985; //0.205
-
+	this.timeEnabled = true;
 	this.name = "untitled";
 	this.URL = 'http://locus.creacast.com:9001/le-rove_niolon.mp3';
 	this.search = "seagull";
@@ -91,7 +93,10 @@ var Inspector = function()
 	this.destroyAll = function() {
 		ActionDestroy();
 	};
-
+	this.startTutorial = function()
+	{
+		Log("use the arrows to move around...", 4);
+	};
 	this.createSource = function()
 	{
 		var url = this.source;
@@ -220,15 +225,42 @@ var Inspector = function()
 
 var logx = 0;
 var logy = 10;
-function Log(message) 
+function Log(message, color) 
 {
-	if (logy>200-10)
+	
+	if (logy>250-10)
 	{
 		ctx.fillStyle = '#000';
 		ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 		logy = 10;
 	}
-	ctx.fillStyle = '#FFF';
+	if (color === undefined)
+	{
+		ctx.fillStyle = '#AAA';
+	}
+	else if (color === 0)
+	{
+		ctx.fillStyle = '#FFF';
+	}
+
+	else if (color === 1)
+	{
+		ctx.fillStyle = '#0F0';
+	}
+	else if (color === 2)
+	{
+		ctx.fillStyle = '#FF0';
+	}
+	else if (color === 3)
+	{
+		ctx.fillStyle = '#F00';
+	}
+	else if (color === 4)
+	{
+		ctx.fillStyle = '#00F';
+	}
+
+	
 	ctx.fillText(message, logx, logy );
 	logy+=10;
 }
@@ -406,12 +438,16 @@ function animate() {
 	stats.begin();
 	var dt = 1/60;
 	main_timer += dt;
-	parameters.azimuth = parameters.azimuth+dt/360;
-	if (parameters.azimuth > 1)
-		parameters.azimuth -= 1;
-	updateSun();
+	if (parameters.timeEnabled)
+	{
+		parameters.azimuth = parameters.azimuth+dt/360;
+		if (parameters.azimuth > 1)
+			parameters.azimuth -= 1;
+		updateSun();
+		water.material.uniforms[ 'time' ].value += dt;
+	}
 
-	water.material.uniforms[ 'time' ].value += dt;
+	
 	if (MovingForward === true) {
 		moveCameraForward(avatar_speed*dt);
 		avatar_dirty = true;
@@ -565,7 +601,7 @@ function createObject(o)
 	var cube;
 	
 	
-		Log("create object "+ o.kind);
+		Log("create object "+ o.kind, 1);
 		//console.log("create object "+ o.kind);
 		var geometry;
 		if (o.kind === "cube")
@@ -706,7 +742,7 @@ function createObject(o)
 			var sound = new THREE.PositionalAudio( listener );
 			try
 			{
-				Log("read pd patch...");
+				Log("read pd patch...", 0);
 				console.log("read pd patch:", o.pd);
 				patch = Pd.loadPatch(o.pd);
 				//Pd.start();
@@ -723,7 +759,7 @@ function createObject(o)
 			}
 			catch (exception)
 			{
-				Log("PD patch loading exception:" + exception);
+				Log("PD patch loading exception:" + exception, 3);
 				console.log("PD patch loading exception:", exception);
 			}
 			sound.setRefDistance( 1 );
@@ -816,12 +852,23 @@ function createObject(o)
 				var audioLoader = new THREE.AudioLoader();
 				audioLoader.load( o.url, function( buffer ) {
 					console.log("LOADED!", buffer);
-					Log("loaded sound " + o.url);
+					Log("loaded sound " + o.url, 1);
 				sound.setBuffer( buffer );
 				sound.setLoop( true );
 				sound.setVolume(1);
 				sound.play();
-				});
+				},
+				// onProgress callback
+				function ( xhr ) {
+					//console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
+				},
+
+				// onError callback
+				function ( err ) {
+					console.log( 'An error happened' );
+					Log("error loading sound " + o.url, 3);
+				}
+				);
 				//var mediaElement = new Audio(o.url);
 				//mediaElement.crossOrigin = "anonymous";
 				//mediaElement.loop = true;
@@ -839,7 +886,7 @@ function createObject(o)
 				var audioLoader = new THREE.AudioLoader();
 				audioLoader.load( o.ir, function( buffer ) {
 					console.log("LOADED!", buffer);
-					Log("loaded IR " + o.ir);
+					Log("loaded IR " + o.ir, 1);
 					cube.convolver.buffer = buffer;
 				});
 				sound.setRefDistance( 1 );
@@ -910,7 +957,7 @@ function uploadModelFile(file, worldposition, worldrotation)
 	var fileRef = audioRef.child(uuidv4());
 
 	var url = fileRef.fullPath;
-	Log("uploading to " + url);
+	Log("uploading to " + url, 2);
 	fileRef.put(file).then(function(snapshot) 
 	{
 		console.log('Uploaded a blob or file! ');			
@@ -983,7 +1030,7 @@ function uploadAudioFile(file, worldposition)
 	var fileRef = audioRef.child(uuidv4());
 
 	var url = fileRef.fullPath;
-	Log("uploading to " + url);
+	Log("uploading to " + url, 2);
 	fileRef.put(file).then(function(snapshot) 
 	{
 		console.log('Uploaded a blob or file! ');			
@@ -1188,13 +1235,17 @@ function StartDSP()
 	ctx = document.createElement('canvas').getContext('2d');
 	document.getElementById('info').appendChild(ctx.canvas);
 	ctx.canvas.width = window.innerWidth;
-	ctx.canvas.height = 200;
+	ctx.canvas.height = 250;
 	ctx.fillStyle = '#000';
 	ctx.strokeStyle = '#FFF';
 	ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-
-	Log("Welcome to New Atlantis...");
 	Login();
+	Log("Welcome to New Atlantis...", 0);
+	if (avatarname === "")
+		Log("You are spectator", 2)
+	else
+		Log("You are logged as " + avatarname, 1);
+	
 	//overlay
 	var overlay = document.getElementById( 'overlay' );
 	overlay.remove();
@@ -1235,35 +1286,33 @@ function StartDSP()
 		//console.log("intersection=" , intersections);
 		if ( intersections.length > 0 ) 
 		{
-			ObjectDrag = true;
-			object_selection = intersections[ 0 ].object;
-			
-			selection = objects_main[object_selection.uuid];
 
-			if (selection.remote.kind === "island")
+			if (parameters.editMode)
 			{
-				//non draggable
-				object_selection = undefined;
-				selection = undefined;
-				ObjectDrag = false;
-				MouseDrag = true;
+				ObjectDrag = true;
+				object_selection = intersections[ 0 ].object;
+				
+				selection = objects_main[object_selection.uuid];
+
+				if (selection.remote.kind === "island")
+				{
+					//non draggable
+					object_selection = undefined;
+					selection = undefined;
+					ObjectDrag = false;
+					MouseDrag = true;
+				}
+				else
+				{
+					object_selection.material.emissive.set( 0xaaaaaaaa );
+				}
 			}
 			else
 			{
-				object_selection.material.emissive.set( 0xaaaaaaaa );
+				//Activate ?
+				MouseDrag = true;
 			}
 			//console.log("selection set to:", selection);
-			/*
-			if ( group.children.includes( object ) === true ) {
-				object.material.emissive.set( 0x000000 );
-				scene.attach( object );
-			} else {
-				object.material.emissive.set( 0xaaaaaa );
-				group.attach( object );
-			}
-			controls.transformGroup = true;
-			draggableObjects.push( group );
-			*/
 		}
 		else
 		{
@@ -1274,16 +1323,7 @@ function StartDSP()
 			}
 			MouseDrag = true;
 		}
-		/*
-		if ( group.children.length === 0 ) {
-			controls.transformGroup = false;
-			draggableObjects.push( ...objects );
-		}
-		*/
 		
-
-
-
 
 
 	}, false);
@@ -1318,7 +1358,7 @@ function StartDSP()
 				MovingRight = false;
 				break;
 			case 16: //shift
-				avatar_speed = 20;
+				avatar_speed = 5;
 			break;
 		}
 	}, false);
@@ -1341,7 +1381,10 @@ function StartDSP()
 				MovingRight = true;
 				break;
 			case 8: //backspace
-				DeleteCurrentSelection();
+				if (parameters.editMode)
+				{
+					DeleteCurrentSelection();
+				}
 			break;
 			case 13: //enter
 			//SendMessageToCurrentSelection();
@@ -1544,7 +1587,7 @@ function ActionResonator(ir)
 
 function DeleteCurrentSelection()
 {
-	Log("delete object " + selection.remote.name + "(" + selection.remote.kind + ")");
+	Log("delete object " + selection.remote.name + "(" + selection.remote.kind + ")", 2);
 	firebase.database().ref('spaces/test/objects/' + selection.remote.id).remove();
 	selection = undefined;
 	object_selection = undefined;
@@ -1572,6 +1615,8 @@ function CreateGUI()
 	dat.GUI.TEXT_OPEN = "New Atlantis - Open controls";
 	
 	gui = new dat.GUI();
+	gui.add(parameters, "editMode");
+	gui.add(parameters, 'startTutorial');
 	fAudioSources = gui.addFolder('Audio Source');
 	f3D = gui.addFolder('3D Object');
 	fBox = gui.addFolder('Box (modifier) (not impl.)');
@@ -1579,9 +1624,10 @@ function CreateGUI()
 
 
 
-	var folder = gui.addFolder( 'Sky' );
-	folder.add( parameters, 'inclination', 0, 0.5, 0.0001 ).onChange( updateSun );
-	folder.add( parameters, 'azimuth', 0, 1, 0.0001 ).onChange( updateSun ).listen();
+	var fSky = gui.addFolder( 'Sky' );
+	fSky.add( parameters, 'inclination', 0, 0.5, 0.0001 ).onChange( updateSun );
+	fSky.add( parameters, 'azimuth', 0, 1, 0.0001 ).onChange( updateSun ).listen();
+	fSky.add( parameters, 'timeEnabled');
 	
 	fAudioSources.add(parameters, "source", na_library_sound);
 	fAudioSources.add(parameters, "createSource");
