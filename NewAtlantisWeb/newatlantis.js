@@ -574,8 +574,9 @@ function animate() {
 	{
 		var o = space_objects[i];
 		//sources in free air, we disconnect
-		if (o.convolver === undefined && o.object3D.audio.gain != undefined)
+		if (o.convolver === undefined && o.object3D.audio !== undefined && o.object3D.audio.gain != undefined)
 		{
+
 			o.object3D.audio.gain.disconnect();
 			o.object3D.audio.gain.connect(o.object3D.audio.listener.getInput());
 			o.object3D.material.emissive.set( 0x00000000 );
@@ -601,7 +602,7 @@ function createObject(o)
 	var cube;
 	
 	
-		Log("create object "+ o.kind, 1);
+		Log("create object "+ o.kind + " " + o.name, 1);
 		//console.log("create object "+ o.kind);
 		var geometry;
 		if (o.kind === "cube")
