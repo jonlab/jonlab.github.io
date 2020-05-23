@@ -111,3 +111,13 @@ var na_library_patches =
 
 };
 
+
+var na_pois = 
+{
+	origin:'{"x":0,"y":1,"z":0}',
+	underwater:'{"x":0,"y":-10,"z":0}',
+	ocean_limit:'{"x":5000,"y":1,"z":0}',
+	very_far:'{"x":100000,"y":1,"z":0}'
+
+};
+

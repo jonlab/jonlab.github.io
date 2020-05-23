@@ -60,16 +60,18 @@ var fogColor;
 var vec = new THREE.Vector3();
 var dir = new THREE.Vector3();
 var euler = new THREE.Euler(0, 0, 0, 'YXZ');
+
 var ctx;
-//var canvas_log = document.getElementById('log');
-
-
+var logs = [];
+var chat_input;
+var chat_button;
 
 
 var Inspector = function() 
 {
 	this.editMode = false;
 	this.position = "";
+	this.poi = '{"x":0,"y":1,"z":0}';
 	
 	this.distance = 400;
 	this.inclination = 0.1; //0.49
@@ -218,6 +220,12 @@ var Inspector = function()
 	this.box3 = function() {
 		ActionObject("box");
 	};
+
+	this.teleport = function() {
+		Teleport(this.poi);
+	};
+
+
   };
   
   parameters = new Inspector();
@@ -227,7 +235,60 @@ var logx = 0;
 var logy = 10;
 function Log(message, color) 
 {
+	var m = {};
+	m.text = message;
+	if (color === undefined)
+	{
+		m.color = '#AAA';
+	}
+	else if (color === 0)
+	{
+		m.color = '#FFF';
+	}
+
+	else if (color === 1)
+	{
+		m.color = '#0F0';
+	}
+	else if (color === 2)
+	{
+		m.color = '#FF0';
+	}
+	else if (color === 3)
+	{
+		m.color = '#F00';
+	}
+	else if (color === 4)
+	{
+		m.color = '#66F';
+	}
+	logs.push(m);
+
+	//rerender
+
+	ctx.fillStyle = '#000';
+	ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+	logy = 10;
 	
+	var end = logs.length-1;
+	var count = 21;
+	var start =  end-count;
+	if (start < 0)
+		start = 0;
+	for (var l=start;l<=end;++l)
+	{
+		var m = logs[l];
+		ctx.fillStyle = m.color;
+		ctx.fillText(m.text, logx, logy );
+		logy+=10;
+	}
+}
+
+function _Log(message, color) 
+{
+	
+	//fixme : refaire un rendu à chaque nouveau log?
+
 	if (logy>250-10)
 	{
 		ctx.fillStyle = '#000';
@@ -257,7 +318,7 @@ function Log(message, color)
 	}
 	else if (color === 4)
 	{
-		ctx.fillStyle = '#00F';
+		ctx.fillStyle = '#AAF';
 	}
 
 	
@@ -270,6 +331,8 @@ function onWindowResize() {
 	camera.aspect = window.innerWidth / height;
 	camera.updateProjectionMatrix();
 	renderer.setSize(window.innerWidth, height);
+	//if (ctx != undefined)
+	//	ctx.canvas.width = window.innerWidth;
 }
 
 /*
@@ -595,13 +658,16 @@ function roundDown(number, decimals) {
     decimals = decimals || 0;
     return ( Math.floor( number * Math.pow(10, decimals) ) / Math.pow(10, decimals) );
 }
-
+var avatars = [];
 //creates a new atlantis object (on database demand)
 function createObject(o) 
 {
 	var cube;
 	
-	
+		if (o.kind === "avatar")
+		{
+			avatars.push(o.name);
+		}
 		Log("create object "+ o.kind + " " + o.name, 1);
 		//console.log("create object "+ o.kind);
 		var geometry;
@@ -1231,16 +1297,37 @@ inputFileModel.onchange = openFileModel;
 
 
 
+
 function StartDSP()
 {
+	var elInfo = document.getElementById('info');
 	//log canvas
 	ctx = document.createElement('canvas').getContext('2d');
-	document.getElementById('info').appendChild(ctx.canvas);
+	elInfo.appendChild(ctx.canvas);
 	ctx.canvas.width = window.innerWidth;
-	ctx.canvas.height = 250;
+	ctx.canvas.height = 230;
 	ctx.fillStyle = '#000';
 	ctx.strokeStyle = '#FFF';
 	ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+	chat_input = document.createElement('input');
+	chat_input.placeholder = "chat or enter a command here";
+	elInfo.appendChild(chat_input);
+
+	chat_button = document.createElement('button');
+	chat_button.textContent = "send";
+	chat_button.onclick = function()
+	{
+		OnChat(chat_input.value);
+		chat_input.value = "";
+		
+	};
+	elInfo.appendChild(chat_button);
+
+
+
+
+
 	Login();
 	Log("Welcome to New Atlantis...", 0);
 	if (avatarname === "")
@@ -1390,7 +1477,9 @@ function StartDSP()
 			break;
 			case 13: //enter
 			//SendMessageToCurrentSelection();
-			parameters.createObject();
+			//parameters.createObject();
+				OnChat(chat_input.value);
+				chat_input.value = "";
 			break;
 			case 16: //shift
 				avatar_speed = 340;
@@ -1398,7 +1487,7 @@ function StartDSP()
 		}
 
 		
-		if (nomTouche === 'p') 
+		/*if (nomTouche === 'p') 
 		{
 			selection.remote.y += 0.1;
 			firebase.database().ref('spaces/test/objects/' + selection.remote.id).set(selection.remote);
@@ -1409,9 +1498,11 @@ function StartDSP()
 			selection.remote.y -= 0.1;
 			firebase.database().ref('spaces/test/objects/' + selection.remote.id).set(selection.remote);
 		}
+		*/
 	}, false);
 
 
+	//FIXME : switch to a cell based space partitionning with streaming
 var objectsRef = firebase.database().ref('spaces/test/objects');
 objectsRef.on('child_changed', function (snapshot) {
 	var object = snapshot.val();
@@ -1427,7 +1518,6 @@ objectsRef.on('child_changed', function (snapshot) {
 	selectedObject.object3D.material.color.r = object.r;
 	selectedObject.object3D.material.color.g = object.g;
 	selectedObject.object3D.material.color.b = object.b;
-
 });
 
 objectsRef.on('child_added', function (snapshot) {
@@ -1453,10 +1543,15 @@ objectsRef.on('child_added', function (snapshot) {
 	}
 });
 
+
+
 objectsRef.on('child_removed', function (snapshot) {
 	var object = snapshot.val();
 	//console.log("removed", object);
 	var selectedObject = space_objects[object.id];//scene.getObjectByName(object.id);
+
+	
+
 	//console.log("removing", selectedObject);
 	scene.remove(selectedObject.object3D);
 	const index = objects.indexOf(selectedObject.object3D);
@@ -1465,7 +1560,6 @@ objectsRef.on('child_removed', function (snapshot) {
 		objects.splice(index, 1);
 	}
 
-	//selectedObject.object3D.dispose();
 	if (selectedObject.object3D.audio !== undefined)
 	{
 		selectedObject.object3D.audio.stop();
@@ -1477,6 +1571,8 @@ objectsRef.on('child_removed', function (snapshot) {
 		selectedObject.object3D.audio.source = null;
 		selectedObject.object3D.audio.panner = null;
 	}
+	//selectedObject.object3D.dispose();
+	
 	//FIXME : delete ?
 
 	
@@ -1488,6 +1584,33 @@ objectsRef.on('value', function (snapshot) {
 	//space_objects.remove(object.id)
 });
 
+
+
+
+
+
+//chat
+
+
+var postsRef = firebase.database().ref('posts');
+postsRef.on('child_changed', function (snapshot) {
+	var object = snapshot.val();
+	//console.log("posts changed", object);
+});
+
+postsRef.on('child_added', function (snapshot) {
+	var object = snapshot.val();
+	//console.log("posts added", object);
+	var line = object.who + ": " + object.text;
+	Log(line, 4);
+});
+
+
+
+postsRef.on('child_removed', function (snapshot) {
+	var object = snapshot.val();
+	//console.log("posts removed", object);
+});
 
 
 
@@ -1656,36 +1779,20 @@ function CreateGUI()
 	f3D.add(parameters, "createObject");
 	f3D.add(parameters, "loadModelFile");
 
-	gui.add(parameters, 'destroyAll');
+	//gui.add(parameters, 'destroyAll');
 	gui.add(parameters, 'position').listen();
+
+	gui.add(parameters, "poi", na_pois);
+	gui.add(parameters, "teleport");
+
 	
-	//gui.add(obj, 'volume', 0, 1);
-
-/*
-	var gui2 = new dat.GUI();	
-	var f1 = gui2.addFolder('folder1');
-	var f2 = gui2.addFolder('folder2');
-	var f3 = gui2.addFolder('folder3');
-*/
-
-	/*
-	Audio Source
-Box (modifieurs)
-Space (resonnateurs)
-Hammer (pour casser les Sound Objects – piste pour la granulation)
-Handle (pour déformer les objets)
-Ground
-Sky (à voir si c’est nécessaire, pourrait permettre de choisir différent ground ou différent sky)
-
-*/
-
-	//gui.remove(obj, "destroy");
-	//gui.add(obj, 'destroy');
-	//gui.width = 400;
+	
 
 	parameters.name = "name";
 	parameters.volume = 0.7;
 
+	gui.add(parameters, 'volume', 0, 1).onChange( setMasterVolume ).listen();
+	
 	// Iterate over all controllers
 	for (var i in gui.__controllers) {
 		gui.__controllers[i].updateDisplay();
@@ -1694,6 +1801,22 @@ Sky (à voir si c’est nécessaire, pourrait permettre de choisir différent gr
 	gui.close();
 }
 
+
+function Teleport(poi)
+{
+	console.log("teleport to ", poi);
+	const pos = JSON.parse(poi);
+	camera.position.x = pos.x;
+	camera.position.y = pos.y;
+	camera.position.z = pos.z;
+	avatar_dirty = true;
+
+}
+
+function setMasterVolume()
+{
+	listener.setMasterVolume(parameters.volume);
+}
 function OnDrop(ev)
 {
 	ev.preventDefault();
@@ -1762,4 +1885,60 @@ function OnDragOver(ev)
 
 	ev.preventDefault();
     return false;
+}
+
+
+function OnChat(arg)
+{
+if (arg === "clear")
+{
+	firebase.database().ref('posts').set([]);
+	Log("command clear OK!");
+	return;
+}
+else if (arg === "destroyall")
+{
+	ActionDestroy();
+	Log("command destroyall OK!");
+	return;
+}
+else if (arg === "create cube")
+{
+	ActionCube();
+	Log("command create cube OK!");
+	return;
+}
+else if (arg === "whoishere")
+{
+	Log("command whoishere returned:", 2);
+	var result = "";
+	for (var i in avatars)
+	{
+		result += avatars[i] + " ";		
+		
+	}
+	Log(result, 0);
+	return;
+}
+
+
+	var postData = 
+	{
+
+	};
+	if (avatarname === "")
+		postData.who = "spectator";
+	else
+		postData.who = avatarname;
+	postData.text = arg;
+
+	// Get a key for a new Post.
+	var newPostKey = firebase.database().ref().child('posts').push().key;
+
+	// Write the new post's data simultaneously in the posts list and the user's post list.
+	var updates = {};
+	updates['/posts/' + newPostKey] = postData;
+	firebase.database().ref().update(updates);
+  
+	//Log(arg);
 }
