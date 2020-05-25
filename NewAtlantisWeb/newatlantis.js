@@ -590,11 +590,30 @@ function animate() {
 
 			//actions
 
-			if (pad.buttons[0].pressed)
-			{
-			//	Log("button 0 pressed");
 
+			for (var i in gamepad_buttons)
+			{
+				var b = gamepad_buttons[i];
+				var c = pad.buttons[i].pressed;
+				if (c && !b.laststate)
+					b.pressed = true;
+				else
+					b.pressed = false;
+				if (!c && b.laststate)
+					b.released = true;
+				else
+					b.released = false;
+				b.laststate = c;
+				gamepad_buttons[i] = b;
 			}
+	
+
+			if (gamepad_buttons[0].pressed)
+			{
+				ActionCube();
+			}
+			
+
 		}
 	}
 	
@@ -1403,7 +1422,7 @@ var pad_movex_center = 0;
 var pad_movey_center = 0;
 var pad_lookx_center = 0;
 var pad_looky_center = 0;
-
+var gamepad_buttons = [];
 
 function StartDSP()
 {
@@ -1797,6 +1816,7 @@ function StopDSP()
 function ActionCube()
 {
 	var obj= getNewObjectCommand("cube");
+	obj.name = "cube";
 	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
 }
 
@@ -2147,6 +2167,15 @@ window.addEventListener("gamepadconnected", function( event ) {
     // Toutes la valeurs d'axes et les buttons sont accessibles à travers:
 	;
 	console.log("gamepadconnected", event.gamepad);
+
+	for (var i=0;i<4;++i)
+	{
+		var b = {};
+		b.pressed = false;
+		b.released = false;
+		b.laststate = false;
+		gamepad_buttons[i] = b;
+	}
 
 	
 });
