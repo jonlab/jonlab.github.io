@@ -67,6 +67,8 @@ var logs = [];
 var chat_input;
 var chat_button;
 
+var listener_filter;
+
 var Inspector = function() 
 {
 	this.editMode = false;
@@ -475,6 +477,27 @@ updateSun();
 listener = new THREE.AudioListener();
 camera.add(listener);
 audioContext = listener.context;
+
+/*
+var compressor = audioContext.createDynamicsCompressor();
+compressor.threshold.setValueAtTime(-50, audioContext.currentTime);
+compressor.knee.setValueAtTime(40, audioContext.currentTime);
+compressor.ratio.setValueAtTime(12, audioContext.currentTime);
+compressor.attack.setValueAtTime(0, audioContext.currentTime);
+compressor.release.setValueAtTime(0.25, audioContext.currentTime);
+listener_filter = compressor;
+*/
+
+/*
+var biquad = audioContext.createBiquadFilter();
+biquad.type = "lowpass";
+biquad.frequency.setValueAtTime(300, audioContext.currentTime);
+biquad.Q.setValueAtTime(10, audioContext.currentTime);
+listener_filter = biquad;
+*/
+
+//listener.setFilter(listener_filter);
+
 //loaders
 gltfLoader = new GLTFLoader();
 //Flamingo.glb
@@ -1937,7 +1960,7 @@ function CreateGUI()
 	
 
 	parameters.name = "name";
-	parameters.volume = 0.7;
+	parameters.volume = 1;
 
 	gui.add(parameters, 'volume', 0, 1).onChange( setMasterVolume ).listen();
 	
