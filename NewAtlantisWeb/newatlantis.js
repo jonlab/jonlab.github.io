@@ -499,7 +499,68 @@ function AddGroundPlane(x,y,z,sizex, sizez)
 function animate() {
 	
 	stats.begin();
+	var deadzone = 0.1;
 	var dt = 1/60;
+
+	if (gamepad_connected)
+	{
+		if (!gamepad_calibrated)
+		{
+			for (const pad of navigator.getGamepads()) 
+			{
+				if (pad != null)
+				{
+					GamepadCalibrate(pad);
+				}
+			}
+		}
+		for (const pad of navigator.getGamepads()) 
+		{
+			if (pad === null)
+			continue;
+			//console.log(pad);
+			var movex = pad.axes[0]-pad_movex_center;
+			var movey = pad.axes[1]-pad_movey_center;
+			var lookx = pad.axes[2]-pad_lookx_center;
+			var looky = pad.axes[3]-pad_looky_center;
+			
+			if (Math.abs(movex)>deadzone)
+			{
+				moveCameraRight(movex*avatar_speed*dt*3);
+				avatar_dirty = true;
+			}
+			if (Math.abs(movey)>deadzone)
+			{
+				moveCameraForward(-movey*avatar_speed*dt*5);
+				avatar_dirty = true;
+			}
+
+			if (Math.abs(lookx)<deadzone) lookx = 0;
+			if (Math.abs(looky)<deadzone) looky = 0;
+
+			if (lookx !== 0 || looky !== 0)
+			{
+				euler.setFromQuaternion(camera.quaternion);
+				euler.y -= lookx * dt * 2;
+				euler.x -= looky * dt * 2;
+				euler.x = Math.max(- 3.14 / 2, Math.min(3.14 / 2, euler.x));
+				camera.quaternion.setFromEuler(euler);
+				avatar_dirty = true;
+			}
+
+			//actions
+
+			if (pad.buttons[0].pressed)
+			{
+			//	Log("button 0 pressed");
+
+			}
+		}
+	}
+	
+
+	
+	
 	main_timer += dt;
 	if (parameters.timeEnabled)
 	{
@@ -918,7 +979,7 @@ function createObject(o)
 			{
 				var audioLoader = new THREE.AudioLoader();
 				audioLoader.load( o.url, function( buffer ) {
-					console.log("LOADED!", buffer);
+					//console.log("LOADED!", buffer);
 					Log("loaded sound " + o.url, 1);
 				sound.setBuffer( buffer );
 				sound.setLoop( true );
@@ -1295,11 +1356,18 @@ inputFileModel.id = '3d';
 inputFileModel.onchange = openFileModel;
 
 
-
+var gamepad_connected = false;
+var gamepad_calibrated = false;
+var pad_movex_center = 0;
+var pad_movey_center = 0;
+var pad_lookx_center = 0;
+var pad_looky_center = 0;
 
 
 function StartDSP()
 {
+
+	
 	var elInfo = document.getElementById('info');
 	//log canvas
 	ctx = document.createElement('canvas').getContext('2d');
@@ -1330,6 +1398,8 @@ function StartDSP()
 
 	Login();
 	Log("Welcome to New Atlantis...", 0);
+	Log("If you have a gamepad, press any button to activate and calibrate it!", 0);
+
 	if (avatarname === "")
 		Log("You are spectator", 2)
 	else
@@ -1942,3 +2012,39 @@ else if (arg === "whoishere")
   
 	//Log(arg);
 }
+
+function GamepadCalibrate(gamepad)
+{
+	pad_movex_center = gamepad.axes[0];
+	pad_movey_center = gamepad.axes[1];
+	pad_lookx_center = gamepad.axes[2];
+	pad_looky_center = gamepad.axes[3];
+
+	gamepad_calibrated = true;
+
+	if (Math.abs(pad_movex_center)>0.1 || 
+	Math.abs(pad_movey_center)>0.1 ||
+	Math.abs(pad_lookx_center)>0.1 ||
+	Math.abs(pad_looky_center)>0.1)
+	{
+		gamepad_calibrated = false;
+	}
+	gamepad.vibrationActuator.playEffect("dual-rumble", {
+		startDelay: 0,
+		duration: 200,
+		weakMagnitude: 1.0,
+		strongMagnitude: 1.0
+	  });
+}
+
+window.addEventListener("gamepadconnected", function( event ) {
+
+	GamepadCalibrate(event.gamepad);
+	gamepad_connected = true;
+    // Toutes la valeurs d'axes et les buttons sont accessibles à travers:
+	;
+	console.log("gamepadconnected", event.gamepad);
+
+	
+});
+
