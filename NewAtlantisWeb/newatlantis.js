@@ -77,7 +77,7 @@ var Inspector = function()
 	
 	this.distance = 400;
 	this.inclination = 0.1; //0.49
-	this.azimuth = 0.985; //0.205
+	this.azimuth = 0.99; //0.205
 	this.timeEnabled = true;
 	this.name = "untitled";
 	this.URL = 'http://locus.creacast.com:9001/le-rove_niolon.mp3';
@@ -1020,7 +1020,7 @@ function createObject(o)
 				var audioLoader = new THREE.AudioLoader();
 				audioLoader.load( o.url, function( buffer ) {
 					//console.log("LOADED!", buffer);
-					Log("loaded sound " + o.url, 1);
+					Log("loaded sound " + o.url + " - " + buffer.length/1000 + "k samples", 1);
 				sound.setBuffer( buffer );
 				sound.setLoop( true );
 				sound.setVolume(1);
