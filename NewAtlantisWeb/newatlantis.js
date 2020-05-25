@@ -472,6 +472,7 @@ function updateSun() {
 	water.material.uniforms[ 'sunDirection' ].value.copy( light.position ).normalize();
 	cubeCamera.update( renderer, sky );
 }
+
 updateSun();
 
 listener = new THREE.AudioListener();
@@ -781,7 +782,7 @@ function createObject(o)
 		}
 		else if (o.kind === "sphere")
 		{
-			geometry = new THREE.SphereBufferGeometry(0.5,20,20);
+			geometry = new THREE.SphereBufferGeometry(0.5,16,8);
 		}
 		else if (o.kind === "avatar")
 		{
@@ -817,7 +818,7 @@ function createObject(o)
 		}
 		else 
 		{
-			geometry = new THREE.SphereBufferGeometry(0.5,20,20);
+			geometry = new THREE.SphereBufferGeometry(0.5,12,6);
 		}
 		
 		var material = null;
@@ -875,8 +876,8 @@ function createObject(o)
 					font: font,
 					size: 20,
 					height: 0.5,
-					curveSegments: 2,
-					bevelEnabled: true,
+					curveSegments: 1,
+					bevelEnabled: false,
 					bevelThickness: 1,
 					bevelSize: 0,
 					bevelOffset: 0,
@@ -887,7 +888,7 @@ function createObject(o)
 				var text = new THREE.Mesh(geometryText, materialText);
 				cube.add(text);
 				text.scale.set(0.01,0.01,0.01);
-				text.position.y = 1.2;
+				text.position.y = 0.6;
 				text.rotation.y = Math.PI;
 				//console.log("text", text);
 		}
@@ -1044,6 +1045,7 @@ function createObject(o)
 				sound.setRefDistance(1);
 				sound.setRolloffFactor(1);
 				sound.setDistanceModel("exponential");
+				material.wireframe = true;
 				
 			}	
 
