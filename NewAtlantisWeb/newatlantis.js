@@ -57,6 +57,7 @@ var parameters;
 var inputFile;
 var fogColor;
 
+var audioRecorder;
 var vec = new THREE.Vector3();
 var dir = new THREE.Vector3();
 var euler = new THREE.Euler(0, 0, 0, 'YXZ');
@@ -65,7 +66,6 @@ var ctx;
 var logs = [];
 var chat_input;
 var chat_button;
-
 
 var Inspector = function() 
 {
@@ -97,12 +97,28 @@ var Inspector = function()
 	};
 	this.startTutorial = function()
 	{
-		Log("use the arrows to move around...", 4);
+		Log("use the arrows to move around...", 0);
+		Log("click and drag to look around...", 0);
+		Log("...tutorial in progress...", 0);
+
+
 	};
 	this.createSource = function()
 	{
 		var url = this.source;
 		ActionSound(url);
+	};
+
+	this.startRecording = function()
+	{
+		audioRecorder.startRecording();
+		Log("recording started...", 3);
+	};
+
+	this.stopRecording = function()
+	{
+		audioRecorder.finishRecording();
+		Log("recording stopped...", 2);
 	};
 
 	this.createFreesound = function()
@@ -260,7 +276,7 @@ function Log(message, color)
 	}
 	else if (color === 4)
 	{
-		m.color = '#66F';
+		m.color = '#0BF';
 	}
 	logs.push(m);
 
@@ -526,7 +542,7 @@ function animate() {
 			
 			if (Math.abs(movex)>deadzone)
 			{
-				moveCameraRight(movex*avatar_speed*dt*3);
+				moveCameraRight(movex*avatar_speed*dt*2);
 				avatar_dirty = true;
 			}
 			if (Math.abs(movey)>deadzone)
@@ -1368,6 +1384,10 @@ function StartDSP()
 {
 
 	
+
+	  
+
+
 	var elInfo = document.getElementById('info');
 	//log canvas
 	ctx = document.createElement('canvas').getContext('2d');
@@ -1392,6 +1412,60 @@ function StartDSP()
 	};
 	elInfo.appendChild(chat_button);
 
+	//var elVideo = document.createElement('video');
+	//elInfo.appendChild(elVideo);
+
+	//audio recording
+
+	if (navigator.mediaDevices) 
+	{
+		console.log('getUserMedia supported.');
+		navigator.mediaDevices.getUserMedia ({audio: true, video: false})
+		.then(function(stream) {
+			//elVideo.srcObject = stream;
+			//elVideo.onloadedmetadata = function(e) {
+			//	elVideo.play();
+			//	elVideo.muted = true;
+			//};
+	
+			// Create a MediaStreamAudioSourceNode
+			// Feed the HTMLMediaElement into it
+			var sourceNode = audioContext.createMediaStreamSource(stream);
+	
+			audioRecorder = new WebAudioRecorder(sourceNode, {
+				workerDir: "js/",     // must end with slash
+				encoding: "wav",
+				channels: 1,
+				timeLimit: 10,
+				encodeAfterRecord: true
+			  });
+
+			audioRecorder.onComplete = function(recorder, blob) 
+			{ 
+				//recording complete
+				//console.log("blob:", blob);
+				//center
+				mouse.x = 0;
+				mouse.y = 0;
+				raycaster.setFromCamera( mouse, camera );
+				var spawn_position = new THREE.Vector3();
+				spawn_position = raycaster.ray.origin.clone();
+				spawn_position.addScaledVector(raycaster.ray.direction, 5);
+				//we upload the audio content in NA
+				uploadAudioFile(blob, spawn_position);
+			};
+		})
+		.catch(function(err) {
+			console.log('The following gUM error occured: ' + err);
+		});
+	} else {
+	   console.log('getUserMedia not supported on your browser!');
+	}
+
+
+
+
+	
 
 
 
@@ -1827,6 +1901,10 @@ function CreateGUI()
 	fAudioSources.add(parameters, "source", na_library_sound);
 	fAudioSources.add(parameters, "createSource");
 	fAudioSources.add(parameters, "loadAudioFile");
+
+	fAudioSources.add(parameters, "startRecording");
+	fAudioSources.add(parameters, "stopRecording");
+
 	fAudioSources.add(parameters, "patch", na_library_patches);
 	fAudioSources.add(parameters, "createPatch");
 	fAudioSources.add(parameters, "loadPatch");
