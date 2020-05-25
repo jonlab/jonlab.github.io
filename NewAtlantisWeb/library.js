@@ -48,6 +48,7 @@ var na_library_objects = {
 	island:'island'
 };
 
+/*
 var na_library_ir = {
 	ir_0_entree_la_friche:'IR/0_entree_la_friche copie.wav',
 	ir_1_tunnel_souterrain:'IR/1_tunnel_souterrain.wav',
@@ -99,6 +100,32 @@ var na_library_ir = {
 
 };
 
+*/
+
+var na_library_ir = {
+	bathroom:'IR/lib/bathroom.wav',
+	cathedral_Saint_Pierre:'IR/lib/cathedral_Saint_Pierre.wav',
+	empty_city_lockdown_covid_montpellier_2:'IR/lib/empty_city_lockdown_covid_montpellier_2.wav',
+	gandalou_2_tail:'IR/lib/gandalou_2_tail.wav',
+	large_room_1_mono:'IR/lib/large_room_1_mono.wav',
+	large_room_1:'IR/lib/large_room_1.wav',
+	low_ceiling_open_space:'IR/lib/low_ceiling_open_space.wav',
+	niolon_circular_cliff:'IR/lib/niolon_circular_cliff.wav',
+	niolon_fort_big_room:'IR/lib/niolon_fort_big_room.wav',
+	niolon_fort_cave:'IR/lib/niolon_fort_cave.wav',
+	niolon_tunnel:'IR/lib/niolon_tunnel.wav',
+	niolon_valley_1:'IR/lib/niolon_valley_1.wav',
+	niolon_valley_2:'IR/lib/niolon_valley_2.wav',
+	observatory:'IR/lib/observatory.wav',
+	salle_quartz_2:'IR/lib/salle_quartz_2.wav',
+	semi_open_room:'IR/lib/semi_open_room.wav',
+	small_stairway_carpeted_walls_1:'IR/lib/small_stairway_carpeted_walls_1.wav',
+	small_stairway_carpeted_walls_2:'IR/lib/small_stairway_carpeted_walls_2.wav',
+	stairway_very_reverberant_1:'IR/lib/stairway_very_reverberant_1.wav',
+	stairway_very_reverberant_2:'IR/lib/stairway_very_reverberant_2.wav',
+	under_bridge:'IR/lib/under_bridge.wav',
+	wharehouse_papeterie_Arles_tail:'IR/lib/wharehouse_papeterie_Arles_tail.wav'
+};
 
 var na_library_patches = 
 {
