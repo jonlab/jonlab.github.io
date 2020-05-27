@@ -399,13 +399,14 @@ fogColor = new THREE.Color(0x001133);
 
 
 //cells of 10ksqm
+/*
 for (var x=-200;x<=200;x+=100)
 {
 	for (var z=-200;z<=200;z+=100)
 	{
 		AddGroundPlane(x,-10,z,95,95);
 	}
-}
+}*/
 
 camera.position.z = 0;
 camera.position.y = 3;
@@ -1636,6 +1637,7 @@ function StartDSP()
 		//console.log("intersection=" , intersections);
 		if ( intersections.length > 0 ) 
 		{
+			var last_selection = selection;
 			object_selection = intersections[ 0 ].object;
 			selection = objects_main[object_selection.uuid];
 				
@@ -1650,7 +1652,8 @@ function StartDSP()
 					editor.setValue(na_library_default_script);
 
 					//Activate ?
-				if (selection.script !== undefined)
+
+				if (last_selection === selection && selection.script !== undefined)
 				{
 					selection.script.onClick();
 				}
@@ -1670,6 +1673,7 @@ function StartDSP()
 			else
 			{
 				//Activate ?
+				object_selection.material.emissive.set( 0xcccccccc );
 				if (selection.script !== undefined)
 				{
 					selection.script.onClick();
