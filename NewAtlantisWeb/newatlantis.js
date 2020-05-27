@@ -67,6 +67,8 @@ var logs = [];
 var chat_input;
 var chat_button;
 
+var run_button;
+var stop_script_button;
 var listener_filter;
 
 var Inspector = function() 
@@ -537,7 +539,7 @@ function AddGroundPlane(x,y,z,sizex, sizez)
 }
 
 function animate() {
-	
+	requestAnimationFrame(animate);
 	stats.begin();
 	var deadzone = 0.1;
 	var dt = 1/60;
@@ -701,6 +703,28 @@ function animate() {
 		}
 	}
 
+
+	//execute scripts
+	for (var j in space_objects)
+	{
+		var target = space_objects[j];
+		
+		if (target.remote.script !== undefined && target.remote.playing)
+		{
+			try
+			{
+				eval(target.remote.script); //test
+			}
+			catch (exception)
+			{
+				Log(exception,3);
+				target.remote.playing = false;
+			}
+		}
+		
+	}
+
+
 	//apply reverb?
 	//compute all boxes
 	for (var j in space_objects)
@@ -768,7 +792,7 @@ function animate() {
 
 	renderer.render(scene, camera);
 	stats.end();
-	requestAnimationFrame(animate);
+	
 }
 
 animate();
@@ -1271,9 +1295,9 @@ function UpdateSelection()
 {
 	if (selection !== undefined)
 	{
-		selection.remote.x = object_selection.position.x;
-		selection.remote.y = object_selection.position.y;
-		selection.remote.z = object_selection.position.z;
+		selection.remote.x = selection.object3D.position.x;
+		selection.remote.y = selection.object3D.position.y;
+		selection.remote.z = selection.object3D.position.z;
 		//console.log("update selection", selection);
 		firebase.database().ref('spaces/test/objects/' + selection.remote.id).set(selection.remote);
 	}
@@ -1424,6 +1448,8 @@ var pad_lookx_center = 0;
 var pad_looky_center = 0;
 var gamepad_buttons = [];
 
+var editor;
+
 function StartDSP()
 {
 
@@ -1433,6 +1459,9 @@ function StartDSP()
 
 
 	var elInfo = document.getElementById('info');
+
+	
+
 	//log canvas
 	ctx = document.createElement('canvas').getContext('2d');
 	elInfo.appendChild(ctx.canvas);
@@ -1441,6 +1470,9 @@ function StartDSP()
 	ctx.fillStyle = '#000';
 	ctx.strokeStyle = '#FFF';
 	ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+	
+	
 
 	chat_input = document.createElement('input');
 	chat_input.placeholder = "chat or enter a command here";
@@ -1455,7 +1487,36 @@ function StartDSP()
 		
 	};
 	elInfo.appendChild(chat_button);
+	var elEditor = document.getElementById( 'editor' );
 
+	//var editor = document.getElementById( 'editor' );
+	editor = CodeMirror(elEditor, {
+		value: "function myScript(){return 100;}\n",
+		mode:  "javascript"
+	  });
+	  //
+	  editor.setValue("//write your behavior below...");
+	  editor.setSize("100%", 230);
+	  run_button = document.createElement('button');
+	  run_button.textContent = "run";
+	  run_button.onclick = function()
+	{
+		ScriptCurrentSelection();
+		PlayCurrentSelection();
+		UpdateSelection();
+	};
+	elEditor.appendChild(run_button);
+
+	
+	stop_script_button = document.createElement('button');
+	stop_script_button.textContent = "stop";
+	stop_script_button.onclick = function()
+	{
+		StopCurrentSelection();
+		UpdateSelection();
+	};
+	elEditor.appendChild(stop_script_button);
+	
 	//var elVideo = document.createElement('video');
 	//elInfo.appendChild(elVideo);
 
@@ -1554,6 +1615,8 @@ function StartDSP()
 	document.addEventListener("touchmove", handleMove, false);
 	document.addEventListener('mousemove', onMouseMove, false);
 	document.addEventListener('mousedown', (event) => {
+		if (editor.hasFocus())
+			return;
 		//picking
 		mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
 		mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
@@ -1570,7 +1633,12 @@ function StartDSP()
 				object_selection = intersections[ 0 ].object;
 				
 				selection = objects_main[object_selection.uuid];
-
+				if (selection.remote.script !== undefined)
+				{
+					editor.setValue(selection.remote.script);
+				}
+				else
+					editor.setValue("//write your behavior below...");
 				if (selection.remote.kind === "island")
 				{
 					//non draggable
@@ -1606,6 +1674,8 @@ function StartDSP()
 	}, false);
 
 	document.addEventListener('mouseup', (event) => {
+		if (editor.hasFocus())
+			return;
 		MouseDrag = false;
 		ObjectDrag = false;
 		if (object_selection !== undefined)
@@ -1619,7 +1689,8 @@ function StartDSP()
 	document.addEventListener('keyup', (event) => {
 		const nomTouche = event.key;
 		//console.log("release:"+nomTouche);
-
+		if (editor.hasFocus())
+			return;
 
 		switch (event.keyCode) {
 			case 38: // up
@@ -1643,7 +1714,8 @@ function StartDSP()
 	document.addEventListener('keydown', (event) => {
 		const nomTouche = event.key;
 		//console.log("pressed:" + nomTouche);
-		
+		if (editor.hasFocus())
+			return;
 		switch (event.keyCode) {
 			case 38: // up
 				MovingForward = true;
@@ -1668,6 +1740,10 @@ function StartDSP()
 			//parameters.createObject();
 				OnChat(chat_input.value);
 				chat_input.value = "";
+			break;
+			case 17: //control
+				ScriptCurrentSelection();
+				UpdateSelection();
 			break;
 			case 16: //shift
 				avatar_speed = 340;
@@ -1801,10 +1877,6 @@ postsRef.on('child_removed', function (snapshot) {
 });
 
 
-
-
-
-
 }
 
 function StopDSP()
@@ -1908,6 +1980,58 @@ function DeleteCurrentSelection()
 	ObjectDrag = false;
 
 }
+
+function ScriptCurrentSelection()
+{
+	if (selection === undefined)
+	{
+		Log("no selection");
+		return;
+	}
+	else
+		Log("script object " + selection.remote.name + "(" + selection.remote.kind + ")", 2);
+	//firebase.database().ref('spaces/test/objects/' + selection.remote.id).remove();
+	//selection = undefined;
+	//object_selection = undefined;
+	//ObjectDrag = false;
+	
+	selection.remote.script = editor.getValue();
+	//'target.object3D.rotateY(0.1);';
+
+	var target = selection;
+	//eval(selection.remote.script); //test
+	
+
+}
+
+function PlayCurrentSelection()
+{
+	if (selection === undefined)
+	{
+		Log("no selection");
+		return;
+	}
+	else
+		Log("play object " + selection.remote.name + "(" + selection.remote.kind + ")", 2);
+	selection.remote.playing = true;
+}
+
+function StopCurrentSelection()
+{
+	if (selection === undefined)
+	{
+		Log("no selection");
+		return;
+	}
+	else
+		Log("play object " + selection.remote.name + "(" + selection.remote.kind + ")", 2);
+	selection.remote.playing = false;
+}
+
+
+
+
+
 
 function SendMessageToCurrentSelection()
 {

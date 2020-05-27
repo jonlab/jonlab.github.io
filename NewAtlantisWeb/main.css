@@ -29,19 +29,20 @@ canvas {
 #info {
 	position: absolute;
 	bottom: 0px; 
-	width: 100%;
+	width: 50%;
 	height: 250px;
 	padding: 0px;
 	box-sizing: border-box;
-	text-align: center;
+	text-align: left;
 	-moz-user-select: none;
 	-webkit-user-select: none;
 	-ms-user-select: none;
 	user-select: none;
-	pointer-events: none;
+	pointer-events: auto;
 	z-index: 1; /* TODO Solve this in HTML */
-	opacity: 0.5;
+	opacity: 0.6;
 }
+
 
 #info > button {
 	height: 20px;
@@ -52,7 +53,7 @@ canvas {
 	outline: 1px solid #ffffff;
 	border: 0px;
 	/*cursor: pointer;*/
-	opacity: 0.5;
+	opacity: 0.6;
 }
 
 #info > input {
@@ -61,10 +62,38 @@ canvas {
 	padding: 0px;
 	background: black;
 	color: #ffffff;
-	/*outline: 0px solid #ffffff;*/
+	border: 0px;
+	opacity: 0.6;
+}
+
+#editor {
+	position: absolute;
+	bottom: 0px; 
+	right: 0px;
+	width: 50%;
+	height: 250px;
+	padding: 0px;
+	box-sizing: border-box;
+	text-align: left;
+	-moz-user-select: none;
+	-webkit-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	pointer-events: auto;
+	z-index: 1; /* TODO Solve this in HTML */
+	opacity: 0.6;
+}
+
+#editor > button {
+	height: 20px;
+	width: 20%;
+	padding: 0px;
+	background: gray;
+	color: #ffffff;
+	outline: 1px solid #ffffff;
 	border: 0px;
 	/*cursor: pointer;*/
-	opacity: 0.5;
+	opacity: 0.6;
 }
 
 a, button, input, select {
@@ -81,7 +110,7 @@ a, button, input, select {
 
 #overlay {
 	position: absolute;
-	z-index: 1;
+	z-index: 2;
 	top: 0;
 	left: 0;
 	width: 100%;
