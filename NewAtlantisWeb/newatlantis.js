@@ -809,6 +809,37 @@ function animate() {
 animate();
 
 
+function getNoise(duration)
+{
+	var nombreCanaux = 1;
+	// Crée une mémoire tampon vide de 2 secondes
+	// à la fréquence d'échantillonage du contexte AudioContext
+	var nombreFrames = audioContext.sampleRate * duration;
+	var buffer = audioContext.createBuffer(nombreCanaux, nombreFrames, audioContext.sampleRate);
+  	// remplit la mémoire tampon avec du bruit blanc
+  	// valeurs aléatoires entre -1.0 et 1.0
+  	for (var canal = 0; canal < nombreCanaux; canal++) 
+  	{
+    	// génère le tableau contenant les données
+    	var tampon = buffer.getChannelData(canal);
+		for (var i = 0; i < nombreFrames; i++) 
+		{
+      		// Math.random() donne une valeur comprise entre [0; 1.0]
+      		// l'audio doit être compris entre [-1.0; 1.0]
+      		tampon[i] = Math.random() * 2 - 1;
+		}
+	}
+	return buffer;
+
+  // Récupère un AudioBufferSourceNode.
+  // C'est un AudioNode à utiliser quand on veut jouer AudioBuffer
+  //var source = contexteAudio.createBufferSource();
+  // assigne le buffer au AudioBufferSourceNode
+  //source.buffer = buffer;
+
+
+}
+
 function roundDown(number, decimals) {
     decimals = decimals || 0;
     return ( Math.floor( number * Math.pow(10, decimals) ) / Math.pow(10, decimals) );
