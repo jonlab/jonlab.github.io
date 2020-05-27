@@ -780,7 +780,7 @@ function animate() {
 						}
 						o.convolver = r.object3D.convolver;
 						o.object3D.audio.gain.connect( r.object3D.convolver);
-						o.object3D.material.emissive.set( 0x77777777 );
+						//o.object3D.material.emissive.set( 0x77777777 );
 					}	
 				}
 			}
@@ -796,7 +796,7 @@ function animate() {
 
 			o.object3D.audio.gain.disconnect();
 			o.object3D.audio.gain.connect(o.object3D.audio.listener.getInput());
-			o.object3D.material.emissive.set( 0x00000000 );
+			//o.object3D.material.emissive.set( 0x00000000 );
 		}
 	}
 
@@ -1648,6 +1648,12 @@ function StartDSP()
 				}
 				else
 					editor.setValue(na_library_default_script);
+
+					//Activate ?
+				if (selection.script !== undefined)
+				{
+					selection.script.onClick();
+				}
 				if (selection.remote.kind === "island")
 				{
 					//non draggable
