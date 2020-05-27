@@ -73,7 +73,7 @@ var listener_filter;
 
 var Inspector = function() 
 {
-	this.editMode = false;
+	this.editMode = true;
 	this.position = "";
 	this.poi = '{"x":0,"y":1,"z":0}';
 	
@@ -713,7 +713,17 @@ function animate() {
 		{
 			try
 			{
-				eval(target.remote.script); //test
+				
+				//var script = {};
+				//eval(target.remote.script); //using eval
+				//var script = new Function('script', target.remote.script); //using Function
+				//console.log("script:", script);
+				//if (script !== undefined)
+				//	script.update();
+				//script();
+				if (target.script !== undefined)
+					target.script.update();
+
 			}
 			catch (exception)
 			{
@@ -1465,7 +1475,7 @@ function StartDSP()
 	//log canvas
 	ctx = document.createElement('canvas').getContext('2d');
 	elInfo.appendChild(ctx.canvas);
-	ctx.canvas.width = window.innerWidth;
+	ctx.canvas.width = window.innerWidth/2;
 	ctx.canvas.height = 230;
 	ctx.fillStyle = '#000';
 	ctx.strokeStyle = '#FFF';
@@ -1491,11 +1501,11 @@ function StartDSP()
 
 	//var editor = document.getElementById( 'editor' );
 	editor = CodeMirror(elEditor, {
-		value: "function myScript(){return 100;}\n",
+		value: "",
 		mode:  "javascript"
 	  });
 	  //
-	  editor.setValue("//write your behavior below...");
+	  //editor.setValue("//write your behavior below...");
 	  editor.setSize("100%", 230);
 	  run_button = document.createElement('button');
 	  run_button.textContent = "run";
@@ -1626,19 +1636,18 @@ function StartDSP()
 		//console.log("intersection=" , intersections);
 		if ( intersections.length > 0 ) 
 		{
-
+			object_selection = intersections[ 0 ].object;
+			selection = objects_main[object_selection.uuid];
+				
 			if (parameters.editMode)
 			{
 				ObjectDrag = true;
-				object_selection = intersections[ 0 ].object;
-				
-				selection = objects_main[object_selection.uuid];
 				if (selection.remote.script !== undefined)
 				{
 					editor.setValue(selection.remote.script);
 				}
 				else
-					editor.setValue("//write your behavior below...");
+					editor.setValue(na_library_default_script);
 				if (selection.remote.kind === "island")
 				{
 					//non draggable
@@ -1655,6 +1664,10 @@ function StartDSP()
 			else
 			{
 				//Activate ?
+				if (selection.script !== undefined)
+				{
+					selection.script.onClick();
+				}
 				MouseDrag = true;
 			}
 			//console.log("selection set to:", selection);
@@ -1805,6 +1818,16 @@ objectsRef.on('child_added', function (snapshot) {
 		camera.rotation.y = object.rotation.y;
 		camera.rotation.z = object.rotation.z;
 	}
+
+	//scripting
+	if (newobj.remote.playing)
+	{
+		var script = {};
+		script.target = newobj;
+		eval(newobj.remote.script); //using eval
+		newobj.script = script;
+	}
+	
 });
 
 
@@ -1999,6 +2022,12 @@ function ScriptCurrentSelection()
 	//'target.object3D.rotateY(0.1);';
 
 	var target = selection;
+
+	var script = {};
+	script.target = target;
+	eval(selection.remote.script); //using eval
+	selection.script = script;
+				
 	//eval(selection.remote.script); //test
 	
 

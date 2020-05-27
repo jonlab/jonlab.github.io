@@ -148,3 +148,5 @@ var na_pois =
 
 };
 
+
+var na_library_default_script = '//this is a New Atlantis script\nscript.update = function()\n{\n  //update code\n};\nscript.onClick = function()\n{\n  Log("click");\n};';
