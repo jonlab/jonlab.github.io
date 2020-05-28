@@ -39,7 +39,7 @@ var avatar_speed = 5;
 var space_objects = [];  //overall objects
 var objects = []; //THREE objects
 var objects_main = [];
-
+var avatars = []; //all avatars
 var water;
 var cubeCamera;
 
@@ -844,346 +844,332 @@ function roundDown(number, decimals) {
     decimals = decimals || 0;
     return ( Math.floor( number * Math.pow(10, decimals) ) / Math.pow(10, decimals) );
 }
-var avatars = [];
+
 //creates a new atlantis object (on database demand)
 function createObject(o) 
 {
 	var cube;
+	if (o.kind === "avatar")
+	{
+		avatars.push(o.name);
+	}
+	Log("create object "+ o.kind + " " + o.name, 1);
+	//console.log("create object "+ o.kind);
+	var geometry;
+	if (o.kind === "cube")
+	{
+		geometry = new THREE.BoxBufferGeometry();
+	}
+	else if (o.kind === "box")
+	{
+		geometry = new THREE.BoxBufferGeometry();
+	}
+	else if (o.kind === "sphere")
+	{
+		geometry = new THREE.SphereBufferGeometry(0.5,16,8);
+	}
+	else if (o.kind === "avatar")
+	{
+		geometry = new THREE.DodecahedronGeometry();
+	}
+	else if (o.kind === "stream")
+	{
+		geometry = new THREE.TorusGeometry( 0.5, 0.2, 8, 30 );
+	}
+	else if (o.kind === "torus")
+	{
+		geometry = new THREE.TorusGeometry( 0.5, 0.2, 8, 30 );
+	}
+	else if (o.kind === "knot")
+	{
+		geometry = new THREE.TorusKnotGeometry( 0.5, 0.2, 60, 8 );
+	}
+	else if (o.kind === "cylinder")
+	{
+		geometry = new THREE.CylinderGeometry( 1, 1, 2, 16 );
+	}
+	else if (o.kind === "cone")
+	{
+		geometry = new THREE.ConeGeometry( 1, 2, 16);
+	}
+	else if (o.kind === "resonator")
+	{
+		geometry = new THREE.BoxBufferGeometry(10,6,8);
+	}
+	else if (o.kind === "island")
+	{	
+		geometry = new THREE.CylinderGeometry( 40, 50, 2, 64 );
+	}
+	else 
+	{
+		geometry = new THREE.SphereBufferGeometry(0.5,12,6);
+	}
 	
-		if (o.kind === "avatar")
+	var material = null;
+	
+	if (o.kind === "box" || o.kind === "resonator")
+	{
+		material = new THREE.MeshStandardMaterial({transparent:true,opacity:0.5, roughness:0.0});
+	}
+	else
+	{
+		material = new THREE.MeshStandardMaterial();
+	}
+	
+	cube = new THREE.Mesh(geometry, material);
+	cube.position.x = o.x;
+	cube.position.y = o.y;
+	cube.position.z = o.z;
+
+	cube.rotation.x = o.rotation.x;
+	cube.rotation.y = o.rotation.y;
+	cube.rotation.z = o.rotation.z;
+
+	if (o.scale !== undefined)
+	{
+		cube.scale.x = o.scale.x;
+		cube.scale.y = o.scale.y;
+		cube.scale.z = o.scale.z;
+	}
+
+	material.color.r = o.r;
+	material.color.g = o.g;
+	material.color.b = o.b;
+
+	if (o.kind !== "box" && o.kind !== "resonator")
+	{
+		cube.castShadow = true;
+		cube.receiveShadow = false;
+	}
+	
+	//material.color.setHex(Math.random() * 0xffffff );
+	scene.add(cube);
+
+	var display_text = "";
+	//texte
+	//if (o.kind === "avatar")// || o.kind === "stream" || o.kind === "sound")
+	{
+		if (o.name !== undefined)
 		{
-			avatars.push(o.name);
+			display_text = o.name;
 		}
-		Log("create object "+ o.kind + " " + o.name, 1);
-		//console.log("create object "+ o.kind);
-		var geometry;
+	}
+	if (display_text !== "")
+	{
+			var geometryText = new THREE.TextGeometry( display_text, {
+				font: font,
+				size: 20,
+				height: 0.5,
+				curveSegments: 1,
+				bevelEnabled: false,
+				bevelThickness: 1,
+				bevelSize: 0,
+				bevelOffset: 0,
+				bevelSegments: 5
+			} );
+
+			var materialText = new THREE.MeshPhongMaterial();
+			var text = new THREE.Mesh(geometryText, materialText);
+			cube.add(text);
+			text.scale.set(0.01,0.01,0.01);
+			text.position.y = 1;
+			text.rotation.y = Math.PI;
+			//console.log("text", text);
+	}
+
+	if (o.kind === "avatar")
+	{
+		//avatar flashlight
+		//HERE
+		//var avatarlight = new THREE.SpotLight( 0xffccaa, 1, 0, Math.PI / 10, 0 );
+		/*var avatarlight = new THREE.PointLight(0xffccaa, 1, 10);
+		cube.add(avatarlight);
+		avatarlight.position.set(0,0, 0);
+		avatarlight.rotation.set(0,0, 0);
+		avatarlight.castShadow = true;
+		*/
+	}
+	else if (o.pd !== undefined)
+	{
+		var sound = new THREE.PositionalAudio( listener );
+		try
+		{
+			Log("read pd patch...", 0);
+			console.log("read pd patch:", o.pd);
+			patch = Pd.loadPatch(o.pd);
+			//Pd.start();
+			//console.log("loaded patch:", patch);
+			var out = patch.o(0);
+			//console.log("out:", out);
+			var outnode = patch.o(0).getOutNode();
+			//console.log("out node", outnode);
+			//patch.o(0).setWaa(Pd.getAudio().context.createGain(), 0);
+			if (outnode !== undefined)
+			{
+				sound.setNodeSource(patch.o(0).getOutNode());
+			}
+		}
+		catch (exception)
+		{
+			Log("PD patch loading exception:" + exception, 3);
+			console.log("PD patch loading exception:", exception);
+		}
+		sound.setRefDistance( 1 );
+		sound.setRolloffFactor(1);
+		sound.setDistanceModel("exponential");
+		sound.play();
+		cube.add(sound);
+		cube.audio = sound;
+		Pd.receive('tick', function(args) 
+		{
+			//console.log('received a message from "tick" : ', args, cube);
+			//" color.setHex( Math.random() * 0xffffff );
+			//selection.object3D.material.color.setHex(Math.random() * 0xffffff );
+			cube.material.color.setHex(Math.random() * 0xffffff );
+			//o.r = Math.random();
+			//o.g = Math.random();
+			//o.b = Math.random();
+			//console.log("sending");
+			//firebase.database().ref('spaces/test/objects/' + o.id).set(o.remote);
+		});
+
+		Pd.receive('metroTime', function(args) 
+		{
+			//console.log("metroTime:", args)
+			//cube.scale.z = args[0]/100;
+		});
+		
+
+		Pd.receive('FmCarrier', function(args) 
+		{
+			//console.log("FmCarrier:", args)
+			//cube.scale.y = args[0]/100;
+			//cube.material.color.g = args[0]/100;
+		});
+
+		Pd.receive('FmMod', function(args) 
+		{
+			//console.log("FmMod:", args)
+			//cube.scale.x = args[0];
+
+		});
+		
+		
+
+		
+		
+		
+	}
+	else
+	{
+		// create the PositionalAudio object (passing in the listener)
+		var sound = new THREE.PositionalAudio( listener );
+		// load a sound and set it as the PositionalAudio object's buffer
+		var audioLoader = new THREE.AudioLoader();
 		if (o.kind === "cube")
 		{
-			geometry = new THREE.BoxBufferGeometry();
-		}
-		else if (o.kind === "box")
-		{
-			geometry = new THREE.BoxBufferGeometry();
-		}
-		else if (o.kind === "sphere")
-		{
-			geometry = new THREE.SphereBufferGeometry(0.5,16,8);
-		}
-		else if (o.kind === "avatar")
-		{
-			geometry = new THREE.DodecahedronGeometry();
 		}
 		else if (o.kind === "stream")
 		{
-			geometry = new THREE.TorusGeometry( 0.5, 0.2, 8, 30 );
+			var mediaElement = new Audio("http://locus.creacast.com:9001/le-rove_niolon.mp3");
+			mediaElement.crossOrigin = "anonymous";
+			mediaElement.loop = true;
+			mediaElement.play();
+			sound.setMediaElementSource( mediaElement );
+			//sound.play(); //no play possible (have to play the Audio directly)
 		}
-		else if (o.kind === "torus")
+		else if (o.kind === "eau")
 		{
-			geometry = new THREE.TorusGeometry( 0.5, 0.2, 8, 30 );
+			var mediaElement = new Audio("sounds/banque/elements/eau.mp3");
+			mediaElement.crossOrigin = "anonymous";
+			mediaElement.loop = true;
+			mediaElement.play();
+			sound.setMediaElementSource( mediaElement );
 		}
-		else if (o.kind === "knot")
+		else if (o.kind === "sound")
 		{
-			geometry = new THREE.TorusKnotGeometry( 0.5, 0.2, 60, 8 );
-		}
-		else if (o.kind === "cylinder")
-		{
-			geometry = new THREE.CylinderGeometry( 1, 1, 2, 16 );
-		}
-		else if (o.kind === "cone")
-		{
-			geometry = new THREE.ConeGeometry( 1, 2, 16);
-		}
-		else if (o.kind === "resonator")
-		{
-			geometry = new THREE.BoxBufferGeometry(10,6,8);
-		}
-		else if (o.kind === "island")
-		{	
-			geometry = new THREE.CylinderGeometry( 40, 50, 2, 64 );
-		}
-		else 
-		{
-			geometry = new THREE.SphereBufferGeometry(0.5,12,6);
-		}
-		
-		var material = null;
-		
-		if (o.kind === "box" || o.kind === "resonator")
-		{
-			material = new THREE.MeshStandardMaterial({transparent:true,opacity:0.5, roughness:0.0});
-		}
-		else
-		{
-			material = new THREE.MeshStandardMaterial();
-		}
-		
-		cube = new THREE.Mesh(geometry, material);
-		cube.position.x = o.x;
-		cube.position.y = o.y;
-		cube.position.z = o.z;
+			var audioLoader = new THREE.AudioLoader();
+			audioLoader.load( o.url, function( buffer ) {
+				//console.log("LOADED!", buffer);
+				Log("loaded sound " + o.url + " - " + buffer.length/1000 + "k samples", 1);
+			sound.setBuffer( buffer );
+			sound.setLoop( true );
+			sound.setVolume(1);
+			sound.play();
+			},
+			// onProgress callback
+			function ( xhr ) {
+				//console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
+			},
 
-		cube.rotation.x = o.rotation.x;
-		cube.rotation.y = o.rotation.y;
-		cube.rotation.z = o.rotation.z;
-
-		if (o.scale !== undefined)
-		{
-			cube.scale.x = o.scale.x;
-			cube.scale.y = o.scale.y;
-			cube.scale.z = o.scale.z;
-		}
-
-		material.color.r = o.r;
-		material.color.g = o.g;
-		material.color.b = o.b;
-
-		if (o.kind !== "box" && o.kind !== "resonator")
-		{
-			cube.castShadow = true;
-			cube.receiveShadow = false;
-		}
-		
-		//material.color.setHex(Math.random() * 0xffffff );
-		scene.add(cube);
-
-		var display_text = "";
-		//texte
-		//if (o.kind === "avatar")// || o.kind === "stream" || o.kind === "sound")
-		{
-			if (o.name !== undefined)
-			{
-				display_text = o.name;
+			// onError callback
+			function ( err ) {
+				console.log( 'An error happened' );
+				Log("error loading sound " + o.url, 3);
 			}
-		}
-		if (display_text !== "")
-		{
-				var geometryText = new THREE.TextGeometry( display_text, {
-					font: font,
-					size: 20,
-					height: 0.5,
-					curveSegments: 1,
-					bevelEnabled: false,
-					bevelThickness: 1,
-					bevelSize: 0,
-					bevelOffset: 0,
-					bevelSegments: 5
-				} );
-
-				var materialText = new THREE.MeshPhongMaterial();
-				var text = new THREE.Mesh(geometryText, materialText);
-				cube.add(text);
-				text.scale.set(0.01,0.01,0.01);
-				text.position.y = 0.6;
-				text.rotation.y = Math.PI;
-				//console.log("text", text);
-		}
-
-		if (o.kind === "avatar")
-		{
-			//avatar flashlight
-			//HERE
-			//var avatarlight = new THREE.SpotLight( 0xffccaa, 1, 0, Math.PI / 10, 0 );
-			/*var avatarlight = new THREE.PointLight(0xffccaa, 1, 10);
-			cube.add(avatarlight);
-			avatarlight.position.set(0,0, 0);
-			avatarlight.rotation.set(0,0, 0);
-			avatarlight.castShadow = true;
-			*/
-		}
-		else if (o.pd !== undefined)
-		{
-			var sound = new THREE.PositionalAudio( listener );
-			try
-			{
-				Log("read pd patch...", 0);
-				console.log("read pd patch:", o.pd);
-				patch = Pd.loadPatch(o.pd);
-				//Pd.start();
-				//console.log("loaded patch:", patch);
-				var out = patch.o(0);
-				//console.log("out:", out);
-				var outnode = patch.o(0).getOutNode();
-				//console.log("out node", outnode);
-				//patch.o(0).setWaa(Pd.getAudio().context.createGain(), 0);
-				if (outnode !== undefined)
-				{
-					sound.setNodeSource(patch.o(0).getOutNode());
-				}
-			}
-			catch (exception)
-			{
-				Log("PD patch loading exception:" + exception, 3);
-				console.log("PD patch loading exception:", exception);
-			}
-			sound.setRefDistance( 1 );
+			);
+			sound.setRefDistance(1);
 			sound.setRolloffFactor(1);
 			sound.setDistanceModel("exponential");
-			sound.play();
-			cube.add(sound);
-			cube.audio = sound;
-			Pd.receive('tick', function(args) 
-			{
-				//console.log('received a message from "tick" : ', args, cube);
-				//" color.setHex( Math.random() * 0xffffff );
-				//selection.object3D.material.color.setHex(Math.random() * 0xffffff );
-				cube.material.color.setHex(Math.random() * 0xffffff );
-				//o.r = Math.random();
-				//o.g = Math.random();
-				//o.b = Math.random();
-				//console.log("sending");
-				//firebase.database().ref('spaces/test/objects/' + o.id).set(o.remote);
-			});
+			material.wireframe = true;
+		}	
 
-			Pd.receive('metroTime', function(args) 
-			{
-				//console.log("metroTime:", args)
-				//cube.scale.z = args[0]/100;
-			});
-			
-
-			Pd.receive('FmCarrier', function(args) 
-			{
-				//console.log("FmCarrier:", args)
-				//cube.scale.y = args[0]/100;
-				//cube.material.color.g = args[0]/100;
-			});
-
-			Pd.receive('FmMod', function(args) 
-			{
-				//console.log("FmMod:", args)
-				//cube.scale.x = args[0];
-
-			});
-			
-			
-
-			
-			
-			
-		}
-		else
+		else if (o.kind === "resonator")
 		{
-			// create the PositionalAudio object (passing in the listener)
-			var sound = new THREE.PositionalAudio( listener );
-			// load a sound and set it as the PositionalAudio object's buffer
+			cube.convolver = audioContext.createConvolver();
 			var audioLoader = new THREE.AudioLoader();
-			if (o.kind === "cube")
+			audioLoader.load( o.ir, function( buffer ) {
+				console.log("LOADED!", buffer);
+				Log("loaded IR " + o.ir, 1);
+				cube.convolver.buffer = buffer;
+			});
+			sound.setRefDistance( 1 );
+			sound.setRolloffFactor(0);
+			sound.setDistanceModel("linear");
+			cube.convolver.connect( sound.listener.getInput() ); //connect to output
+		}	
+		else if (o.kind === "duck")
+		{
+			material.visible = false;
+			gltfLoader.load( 'models/Duck.glb', function ( gltf ) 
 			{
-				/*audioLoader.load( 'sounds/rec_2018_10_21_10_24_32.wav', function( buffer ) {
-					sound.setBuffer( buffer );
-					sound.setRefDistance( 0.5 );
-					sound.setRolloffFactor(2);
-					sound.setDistanceModel("exponential");
-					//panner.panningModel = 'HRTF';
-					//panner.distanceModel = 'inverse';
-					sound.offset = Math.random()*3;
-					sound.play();
-					
-					sound.setLoop( true );
-				});
-				*/
-			}
-			else if (o.kind === "stream")
-			{
-				var mediaElement = new Audio("http://locus.creacast.com:9001/le-rove_niolon.mp3");
-				mediaElement.crossOrigin = "anonymous";
-				mediaElement.loop = true;
-				mediaElement.play();
-				sound.setMediaElementSource( mediaElement );
-				//sound.play(); //no play possible (have to play the Audio directly)
-			}
-			else if (o.kind === "eau")
-			{
-				var mediaElement = new Audio("sounds/banque/elements/eau.mp3");
-				mediaElement.crossOrigin = "anonymous";
-				mediaElement.loop = true;
-				mediaElement.play();
-				sound.setMediaElementSource( mediaElement );
-			}
-			else if (o.kind === "sound")
-			{
-				var audioLoader = new THREE.AudioLoader();
-				audioLoader.load( o.url, function( buffer ) {
-					//console.log("LOADED!", buffer);
-					Log("loaded sound " + o.url + " - " + buffer.length/1000 + "k samples", 1);
-				sound.setBuffer( buffer );
-				sound.setLoop( true );
-				sound.setVolume(1);
-				sound.play();
-				},
-				// onProgress callback
-				function ( xhr ) {
-					//console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
-				},
-
-				// onError callback
-				function ( err ) {
-					console.log( 'An error happened' );
-					Log("error loading sound " + o.url, 3);
-				}
-				);
-				//var mediaElement = new Audio(o.url);
-				//mediaElement.crossOrigin = "anonymous";
-				//mediaElement.loop = true;
-				//mediaElement.play();
-				//sound.setMediaElementSource( mediaElement );
-				sound.setRefDistance(1);
-				sound.setRolloffFactor(1);
-				sound.setDistanceModel("exponential");
-				material.wireframe = true;
-				
-			}	
-
-			else if (o.kind === "resonator")
-			{
-				cube.convolver = audioContext.createConvolver();
-				var audioLoader = new THREE.AudioLoader();
-				audioLoader.load( o.ir, function( buffer ) {
-					console.log("LOADED!", buffer);
-					Log("loaded IR " + o.ir, 1);
-					cube.convolver.buffer = buffer;
-				});
-				sound.setRefDistance( 1 );
-				sound.setRolloffFactor(0);
-				sound.setDistanceModel("linear");
-				//sound.gain.connect( o.convolver);
-				cube.convolver.connect( sound.listener.getInput() );
-			}	
-			else if (o.kind === "duck")
-			{
-				material.visible = false;
-				gltfLoader.load( 'models/Duck.glb', function ( gltf ) 
-				{
-					//gltf.scene.scale.set(0.01,0.01,0.01);
-					cube.add( gltf.scene);
-				}, undefined, function ( error ) {
-					console.error( error );
-				} );
-			}
-			else if (o.kind === "model")
-			{
-				material.visible = false;
-				gltfLoader.load( o.url, function ( gltf ) 
-				{
-					//gltf.scene.scale.set(0.01,0.01,0.01);
-					cube.add( gltf.scene);
-				}, undefined, function ( error ) {
-					console.error( error );
-				} );
-			}
-
-
-			cube.add(sound);
-			cube.audio = sound;
+				//gltf.scene.scale.set(0.01,0.01,0.01);
+				cube.add( gltf.scene);
+			}, undefined, function ( error ) {
+				console.error( error );
+			} );
 		}
-		//console.log("physics add mesh");
-		if (PhysicsEnabled)
-			physics.addMesh( cube, 1);
-		//var position = new THREE.Vector3();
-		//position.set( 0, Math.random() * 2, 0 );
-		//physics.setMeshPosition( cube, position );
-		return cube;
+		else if (o.kind === "model")
+		{
+			material.visible = false;
+			gltfLoader.load( o.url, function ( gltf ) 
+			{
+				//gltf.scene.scale.set(0.01,0.01,0.01);
+				cube.add( gltf.scene);
+			}, undefined, function ( error ) {
+				console.error( error );
+			} );
+		}
+		cube.add(sound);
+		cube.audio = sound;
+	}
+	//console.log("physics add mesh");
+	if (PhysicsEnabled)
+		physics.addMesh( cube, 1);
+	//var position = new THREE.Vector3();
+	//position.set( 0, Math.random() * 2, 0 );
+	//physics.setMeshPosition( cube, position );
+	return cube;
 }
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1844,14 +1830,17 @@ objectsRef.on('child_added', function (snapshot) {
 
 	var newobj = {};
 	newobj.remote = object;
+	
+	//3D/audio object
 	newobj.object3D = createObject(object);
 	objects.push(newobj.object3D);
 	objects_main[newobj.object3D.uuid] = newobj;
-	//selection = newobj;
+	
 	space_objects[object.id] = newobj;
+
 	if (object.id === avatarname)
 	{
-		//this avatar, we update camera
+		//this avatar, we update camera with the last known position
 		camera.position.x = object.x;
 		camera.position.y = object.y;
 		camera.position.z = object.z;
@@ -2307,6 +2296,16 @@ else if (arg === "whoishere")
 	Log(result, 0);
 	return;
 }
+else if (arg === "stats")
+{
+	Log("command stats returned:", 2);
+	Log("objects:" + space_objects.length, 0);
+	Log("3D objects:" + objects.length, 0);
+	Log("avatars:" + avatars.length, 0);
+	
+	return;
+}
+
 
 
 	var postData = 
