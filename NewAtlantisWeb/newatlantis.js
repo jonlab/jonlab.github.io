@@ -2479,13 +2479,12 @@ function RenderMinimap()
 			else if (target.remote.kind === "sound")
 			{
 				category = 0;
-				PlotOnMinimap(target.remote, category);
 			}
 			else
 			{
 				category = 1;
-				PlotOnMinimap(target.remote, category);
 			}
+			PlotOnMinimap(target.remote, category);
 			
 		}
 		PlotOnMinimap(camera.position, 3);
