@@ -1729,7 +1729,7 @@ function StartDSP()
 			{
 				//Activate ?
 				//object_selection.material.emissive.set( 0xcccccccc );
-				if (selection.script !== undefined)
+				if (selection !== undefined && selection.script !== undefined)
 				{
 					selection.script.onClick();
 				}
