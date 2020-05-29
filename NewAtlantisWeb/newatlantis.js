@@ -3,6 +3,8 @@ import { Water } from './examples/jsm/objects/Water.js';
 import { Sky } from './examples/jsm/objects/Sky.js';
 import Stats from './examples/jsm/libs/stats.module.js';
 import { CannonPhysics } from './examples/jsm/physics/CannonPhysics.js';
+import { TransformControls } from './examples/jsm/controls/TransformControls.js';
+
 
 
 const PhysicsEnabled = false;
@@ -16,6 +18,7 @@ var MovingLeft = false;
 var MovingRight = false;
 var MouseDrag = false;
 var ObjectDrag = false;
+var control;
 
 //freesound
 //https://freesound.org/docs/api/overview.html
@@ -76,6 +79,7 @@ var listener_filter;
 var Inspector = function() 
 {
 	this.editMode = false;
+	this.advancedMode = true;
 	this.position = "";
 	this.poi = '{"x":0,"y":1,"z":0}';
 	
@@ -390,7 +394,13 @@ document.body.appendChild(renderer.domElement);
 renderer.domElement.ondrop = OnDrop;
 renderer.domElement.ondragover = OnDragOver;
 
-
+control = new TransformControls( camera, renderer.domElement );
+control.space = "local";
+control.setMode( "translate" );
+//control.setMode( "rotate" );
+//control.setMode( "scale" );
+control.addEventListener( 'objectChange', OnControlChange );
+scene.add( control );
 
 fogColor = new THREE.Color(0x001133);
 //scene.background = fogColor;
@@ -414,7 +424,7 @@ camera.position.y = 3;
 camera.rotation.y = Math.PI/2;
 
 //var light = new THREE.PointLight(0xffffff, 1, 100);
-var light = new THREE.DirectionalLight( 0xffffff, 0.8 );
+var light = new THREE.DirectionalLight( 0xffffff, 1 );
 //var light = new THREE.DirectionalLight( 0xffffff, 1.0 );
 //light = new THREE.SpotLight( 0xffffff, 1, 0, Math.PI / 5, 0.3 );
 light.position.set(10,30, 0);
@@ -447,6 +457,8 @@ water = new Water(
 		fog: scene.fog !== undefined
 	}
 );
+water.material.uniforms.size.value = 4;
+console.log(water.material.uniforms.size.value);
 water.rotation.x = - Math.PI / 2;
 water.position.y = 0;
 scene.add( water );
@@ -728,6 +740,8 @@ function animate() {
 				target.script = script;
 			}
 
+			
+
 		}
 
 	}	
@@ -839,34 +853,24 @@ animate();
 
 function getNoise(duration)
 {
-	var nombreCanaux = 1;
-	// Crée une mémoire tampon vide de 2 secondes
-	// à la fréquence d'échantillonage du contexte AudioContext
-	var nombreFrames = audioContext.sampleRate * duration;
-	var buffer = audioContext.createBuffer(nombreCanaux, nombreFrames, audioContext.sampleRate);
-  	// remplit la mémoire tampon avec du bruit blanc
-  	// valeurs aléatoires entre -1.0 et 1.0
-  	for (var canal = 0; canal < nombreCanaux; canal++) 
+	var channelCount = 1;
+	var sampleCount = audioContext.sampleRate * duration;
+	var buffer = audioContext.createBuffer(channelCount, sampleCount, audioContext.sampleRate);
+  	for (var channel = 0; channel < channelCount; channel++) 
   	{
-    	// génère le tableau contenant les données
-    	var tampon = buffer.getChannelData(canal);
-		for (var i = 0; i < nombreFrames; i++) 
+    	var data = buffer.getChannelData(channel);
+		for (var i = 0; i < sampleCount; i++) 
 		{
-      		// Math.random() donne une valeur comprise entre [0; 1.0]
-      		// l'audio doit être compris entre [-1.0; 1.0]
-      		tampon[i] = Math.random() * 2 - 1;
+      		data[i] = Math.random() * 2 - 1;
 		}
 	}
 	return buffer;
-
-  // Récupère un AudioBufferSourceNode.
-  // C'est un AudioNode à utiliser quand on veut jouer AudioBuffer
-  //var source = contexteAudio.createBufferSource();
-  // assigne le buffer au AudioBufferSourceNode
-  //source.buffer = buffer;
-
-
 }
+
+
+
+
+
 
 function roundDown(number, decimals) {
     decimals = decimals || 0;
@@ -877,10 +881,7 @@ function roundDown(number, decimals) {
 function createObject(o) 
 {
 	var cube;
-	if (o.kind === "avatar")
-	{
-		avatars.push(o.name);
-	}
+	
 	Log("create object "+ o.kind + " " + o.name, 1);
 	//console.log("create object "+ o.kind);
 	var geometry;
@@ -953,12 +954,21 @@ function createObject(o)
 	cube.rotation.y = o.rotation.y;
 	cube.rotation.z = o.rotation.z;
 
+	if (o.scale === undefined)
+	{
+		o.scale = {};
+		o.scale.x = 1;
+		o.scale.y = 1;
+		o.scale.z = 1;
+	}
+
 	if (o.scale !== undefined)
 	{
 		cube.scale.x = o.scale.x;
 		cube.scale.y = o.scale.y;
 		cube.scale.z = o.scale.z;
 	}
+	
 
 	material.color.r = o.r;
 	material.color.g = o.g;
@@ -1354,10 +1364,19 @@ function UpdateSelection()
 		selection.remote.x = selection.object3D.position.x;
 		selection.remote.y = selection.object3D.position.y;
 		selection.remote.z = selection.object3D.position.z;
-		//console.log("update selection", selection);
+		selection.remote.rotation.x = selection.object3D.rotation.x;
+		selection.remote.rotation.y = selection.object3D.rotation.y;
+		selection.remote.rotation.z = selection.object3D.rotation.z;
+		selection.remote.scale.x = selection.object3D.scale.x;
+		selection.remote.scale.y = selection.object3D.scale.y;
+		selection.remote.scale.z = selection.object3D.scale.z;
+		console.log("update selection", selection);
 		firebase.database().ref('spaces/test/objects/' + selection.remote.id).set(selection.remote);
 	}
 }
+
+
+
 
 
 function moveCameraRight(distance) {
@@ -1511,12 +1530,9 @@ function StartDSP()
 
 	
 
-	  
-
-
 	var elInfo = document.getElementById('info');
 	var elMinimap = document.getElementById('minimap');
-
+	var elEditor = document.getElementById( 'editor' );
 	
 
 	//log canvas
@@ -1544,8 +1560,7 @@ function StartDSP()
 		
 	};
 	elInfo.appendChild(chat_button);
-	var elEditor = document.getElementById( 'editor' );
-
+	
 	//var editor = document.getElementById( 'editor' );
 	editor = CodeMirror(elEditor, {
 		value: "",
@@ -1639,8 +1654,6 @@ function StartDSP()
 	
 
 
-
-
 	Login();
 	Log("Welcome to New Atlantis...", 0);
 	Log("If you have a gamepad, press any button to activate and calibrate it!", 0);
@@ -1681,6 +1694,8 @@ function StartDSP()
 	document.addEventListener("touchmove", handleMove, false);
 	document.addEventListener('mousemove', onMouseMove, false);
 	document.addEventListener('mousedown', (event) => {
+
+		//Log("mousedown");
 		if (editor.hasFocus())
 			return;
 		//picking
@@ -1690,7 +1705,8 @@ function StartDSP()
 
 		var intersections = raycaster.intersectObjects( objects, true );
 		//console.log("intersection=" , intersections);
-		if ( intersections.length > 0 ) 
+		//Log("dradding="+control.dragging);
+		if ( intersections.length > 0  && !control.dragging) 
 		{
 			var last_selection = selection;
 			object_selection = intersections[ 0 ].object;
@@ -1699,19 +1715,34 @@ function StartDSP()
 			if (parameters.editMode)
 			{
 				ObjectDrag = true;
-				if (selection.remote.script !== undefined)
+				if (selection !== undefined)
 				{
-					editor.setValue(selection.remote.script);
-				}
-				else
-					editor.setValue(na_library_default_script);
-
+					if (selection.remote.script !== undefined)
+					{
+						editor.setValue(selection.remote.script);
+					}
+					else
+						editor.setValue(na_library_default_script);
 					//Activate ?
+					if (last_selection === selection && selection.script !== undefined)
+					{
+						selection.script.onClick();
+					}
 
-				if (last_selection === selection && selection.script !== undefined)
-				{
-					selection.script.onClick();
+					if (last_selection === selection)
+					{
+						//change control mode
+						var mode = control.getMode();
+						if (mode === "translate")
+							control.setMode( "rotate" );
+						else if (mode === "rotate")
+							control.setMode( "scale" );
+						else if (mode === "scale")
+							control.setMode( "translate" );
+					}
 				}
+
+					
 				/*if (selection.remote.kind === "island")
 				{
 					//non draggable
@@ -1721,8 +1752,15 @@ function StartDSP()
 					MouseDrag = true;
 				}
 				else*/
+				if (object_selection !== undefined)
 				{
 					object_selection.material.emissive.set( 0xaaaaaaaa );
+				}
+
+				if (selection !== undefined)
+				{
+					control.detach();
+					control.attach( object_selection);
 				}
 			}
 			else
@@ -1738,13 +1776,14 @@ function StartDSP()
 			}
 			//console.log("selection set to:", selection);
 		}
-		else
+		else if (!control.dragging)
 		{
 			if (object_selection !== undefined)
 			{
 				object_selection.material.emissive.set( 0x00000000 );
 				object_selection = undefined;
 			}
+			control.detach();
 			MouseDrag = true;
 		}
 		
@@ -1826,92 +1865,39 @@ function StartDSP()
 				avatar_speed = 340;
 			break;
 		}
-
-		
-		/*if (nomTouche === 'p') 
-		{
-			selection.remote.y += 0.1;
-			firebase.database().ref('spaces/test/objects/' + selection.remote.id).set(selection.remote);
-		}
-		if (nomTouche === 'm') 
-		{
-
-			selection.remote.y -= 0.1;
-			firebase.database().ref('spaces/test/objects/' + selection.remote.id).set(selection.remote);
-		}
-		*/
 	}, false);
 
 
 	//FIXME : switch to a cell based space partitionning with streaming
 var objectsRef = firebase.database().ref('spaces/test/objects');
+
+
 objectsRef.on('child_changed', function (snapshot) {
 	var object = snapshot.val();
 	//console.log("changed", object);
 	var selectedObject = space_objects[object.id];//scene.getObjectByName(object.id);
-	selectedObject.remote = object;
-	
+	selectedObject.remote = object;	
 	if (selectedObject.object3D !== undefined)
 	{
 		UpdateLocalObject(selectedObject);
-		/*selectedObject.object3D.position.x = object.x;
-		selectedObject.object3D.position.y = object.y;
-		selectedObject.object3D.position.z = object.z;
-		selectedObject.object3D.rotation.x = object.rotation.x;
-		selectedObject.object3D.rotation.y = object.rotation.y;
-		selectedObject.object3D.rotation.z = object.rotation.z;
-		selectedObject.object3D.material.color.r = object.r;
-		selectedObject.object3D.material.color.g = object.g;
-		selectedObject.object3D.material.color.b = object.b;
-		*/
 	}
-	
 });
+
+
 
 objectsRef.on('child_added', function (snapshot) {
 	var object = snapshot.val();
 	//console.log("added", object);
-
 	var newobj = {};
 	newobj.remote = object;
 	space_objects[object.id] = newobj;
-
-	/*var category = 0;
-	if (newobj.remote.kind === "avatar")
-	{
-		category = 2;
-	}
-	else if (newobj.remote.kind === "sound")
-	{
-		category = 0;
-	}
-	else
-	{
-		category = 1;
-	}
-	PlotOnMinimap(newobj.remote, category);
-	*/
-	
-	//3D/audio object
-	/*
-	newobj.object3D = createObject(object);
-	objects.push(newobj.object3D);
-	objects_main[newobj.object3D.uuid] = newobj;
-	
-	//scripting
-	if (newobj.remote.playing)
-	{
-		var script = {};
-		script.target = newobj;
-		eval(newobj.remote.script); //using eval
-		newobj.script = script;
-	}
-	*/
-
 	if (object.id === avatarname)
 	{
-		//this avatar, we update camera with the last known position
-		UpdateLocalCamera(newobj);
+		UpdateLocalCamera(newobj); //this avatar, we update camera with the last known position
+	}
+	if (object.kind === "avatar")
+	{
+		avatars.push(object.name);
 	}
 });
 
@@ -1920,10 +1906,7 @@ objectsRef.on('child_added', function (snapshot) {
 objectsRef.on('child_removed', function (snapshot) {
 	var object = snapshot.val();
 	//console.log("removed", object);
-	var selectedObject = space_objects[object.id];//scene.getObjectByName(object.id);
-
-	
-
+	var selectedObject = space_objects[object.id];
 	//console.log("removing", selectedObject);
 	scene.remove(selectedObject.object3D);
 	const index = objects.indexOf(selectedObject.object3D);
@@ -1931,31 +1914,26 @@ objectsRef.on('child_removed', function (snapshot) {
 	{
 		objects.splice(index, 1);
 	}
-
 	if (selectedObject.object3D.audio !== undefined)
 	{
 		selectedObject.object3D.audio.stop();
 		selectedObject.object3D.audio.gain.disconnect();
 		selectedObject.object3D.audio.source.disconnect();
 		selectedObject.object3D.audio.panner.disconnect();
-
 		selectedObject.object3D.audio.gain = null;
 		selectedObject.object3D.audio.source = null;
 		selectedObject.object3D.audio.panner = null;
 	}
-	//selectedObject.object3D.dispose();
-	
-	//FIXME : delete ?
-
-	
+	//FIXME : delete ?	
 });
+
+
 
 objectsRef.on('value', function (snapshot) {
 	var object = snapshot.val();
 	//console.log("value", object);
 	//space_objects.remove(object.id)
 });
-
 
 
 
@@ -2081,6 +2059,7 @@ function ActionResonator(ir)
 
 function DeleteCurrentSelection()
 {
+	control.detach();
 	Log("delete object " + selection.remote.name + "(" + selection.remote.kind + ")", 2);
 	firebase.database().ref('spaces/test/objects/' + selection.remote.id).remove();
 	selection = undefined;
@@ -2345,6 +2324,12 @@ function OnDrop(ev)
 
 }
 
+
+function OnControlChange()
+{
+	//Log("control change");
+	UpdateSelection();
+}
 function OnDragOver(ev)
 {
 
@@ -2443,13 +2428,9 @@ function GamepadCalibrate(gamepad)
 }
 
 window.addEventListener("gamepadconnected", function( event ) {
-
 	GamepadCalibrate(event.gamepad);
 	gamepad_connected = true;
-    // Toutes la valeurs d'axes et les buttons sont accessibles à travers:
-	;
 	console.log("gamepadconnected", event.gamepad);
-
 	for (var i=0;i<4;++i)
 	{
 		var b = {};
@@ -2458,9 +2439,8 @@ window.addEventListener("gamepadconnected", function( event ) {
 		b.laststate = false;
 		gamepad_buttons[i] = b;
 	}
-
-	
 });
+
 
 
 function RenderMinimap()
@@ -2486,13 +2466,11 @@ function RenderMinimap()
 				category = 1;
 			}
 			PlotOnMinimap(target.remote, category);
-			
 		}
 		PlotOnMinimap(camera.position, 3);
 	}
-
-
 }
+
 
 function PlotOnMinimap(worldposition, category)
 {

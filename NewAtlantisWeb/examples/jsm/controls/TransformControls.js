@@ -22,7 +22,8 @@ import {
 	Raycaster,
 	SphereBufferGeometry,
 	TorusBufferGeometry,
-	Vector3
+	Vector3,
+	LogLuvEncoding
 } from "../../../build/three.module.js";
 
 var TransformControls = function ( camera, domElement ) {
