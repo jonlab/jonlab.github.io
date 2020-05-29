@@ -144,3 +144,18 @@ a, button, input, select {
 	/*opacity: 0.5;*/
 	font-size: 12px;
 }
+
+#minimap {
+	position: absolute;
+	z-index: 2;
+	top: 50px;
+	left: 0px;
+	width: 200px;
+	height:200px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	opacity: 0.8;
+	/*background-color: #000000;*/
+	color: #ffffff;
+}

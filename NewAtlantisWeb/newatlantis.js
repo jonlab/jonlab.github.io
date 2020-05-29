@@ -67,13 +67,15 @@ var logs = [];
 var chat_input;
 var chat_button;
 
+var ctx_minimap;
+
 var run_button;
 var stop_script_button;
 var listener_filter;
 
 var Inspector = function() 
 {
-	this.editMode = true;
+	this.editMode = false;
 	this.position = "";
 	this.poi = '{"x":0,"y":1,"z":0}';
 	
@@ -104,8 +106,6 @@ var Inspector = function()
 		Log("use the arrows to move around...", 0);
 		Log("click and drag to look around...", 0);
 		Log("...tutorial in progress...", 0);
-
-
 	};
 	this.createSource = function()
 	{
@@ -705,12 +705,38 @@ function animate() {
 	}
 
 
-	//execute scripts
+	//streaming
+	var loading_threshold = 200;
+	var loading_threshold2 = loading_threshold*loading_threshold;
+	for (var j in space_objects)
+	{
+		var target = space_objects[j];
+		var dist2 = GetDistance2(target.remote, camera.position);
+		if (dist2 < loading_threshold2 && !target.active)
+		{
+			target.active = true;
+			target.object3D = createObject(target.remote);
+			objects.push(target.object3D);
+			objects_main[target.object3D.uuid] = target;
+	
+			//scripting
+			if (target.remote.playing)
+			{
+				var script = {};
+				script.target = target;
+				eval(target.remote.script); //using eval
+				target.script = script;
+			}
+
+		}
+
+	}	
+	//execute scripts on objects
 	for (var j in space_objects)
 	{
 		var target = space_objects[j];
 		
-		if (target.remote.script !== undefined && target.remote.playing)
+		if (target.active && target.remote.script !== undefined && target.remote.playing)
 		{
 			try
 			{
@@ -741,7 +767,7 @@ function animate() {
 	for (var j in space_objects)
 	{
 		var r = space_objects[j];
-		if (r.remote.kind === "resonator")
+		if (r.remote.kind === "resonator" && r.active)
 		{
 			//update bounding box
 			r.bb = new THREE.Box3();
@@ -754,7 +780,7 @@ function animate() {
 	{
 		var o = space_objects[i];
 		o.convolver = undefined;
-		if (o.object3D.audio !== undefined && o.object3D.convolver === undefined )
+		if (o.active && o.object3D.audio !== undefined && o.object3D.convolver === undefined)
 		{
 			/*
 			if (o.object3D.audio.gain != undefined)
@@ -767,7 +793,7 @@ function animate() {
 			for (var j in space_objects)
 			{
 				var r = space_objects[j];
-				if (r.remote.kind === "resonator")
+				if (r.active && r.remote.kind === "resonator")
 				{
 					//check if sound inside box
 					var isInside = r.bb.containsPoint(o.object3D.position);
@@ -792,7 +818,7 @@ function animate() {
 	{
 		var o = space_objects[i];
 		//sources in free air, we disconnect
-		if (o.convolver === undefined && o.object3D.audio !== undefined && o.object3D.audio.gain != undefined)
+		if (o.active && o.convolver === undefined && o.object3D.audio !== undefined && o.object3D.audio.gain != undefined)
 		{
 
 			o.object3D.audio.gain.disconnect();
@@ -802,6 +828,8 @@ function animate() {
 	}
 
 	renderer.render(scene, camera);
+
+	RenderMinimap();
 	stats.end();
 	
 }
@@ -1487,6 +1515,7 @@ function StartDSP()
 
 
 	var elInfo = document.getElementById('info');
+	var elMinimap = document.getElementById('minimap');
 
 	
 
@@ -1544,6 +1573,15 @@ function StartDSP()
 		UpdateSelection();
 	};
 	elEditor.appendChild(stop_script_button);
+
+	
+	ctx_minimap = document.createElement('canvas').getContext('2d');
+	elMinimap.appendChild(ctx_minimap.canvas);
+	ctx_minimap.canvas.width = 200;
+	ctx_minimap.canvas.height = 200;
+	ctx_minimap.fillStyle = '#000';
+	ctx_minimap.strokeStyle = '#FFF';
+	ctx_minimap.fillRect(0, 0, ctx_minimap.canvas.width, ctx_minimap.canvas.height);
 	
 	//var elVideo = document.createElement('video');
 	//elInfo.appendChild(elVideo);
@@ -1674,7 +1712,7 @@ function StartDSP()
 				{
 					selection.script.onClick();
 				}
-				if (selection.remote.kind === "island")
+				/*if (selection.remote.kind === "island")
 				{
 					//non draggable
 					object_selection = undefined;
@@ -1682,7 +1720,7 @@ function StartDSP()
 					ObjectDrag = false;
 					MouseDrag = true;
 				}
-				else
+				else*/
 				{
 					object_selection.material.emissive.set( 0xaaaaaaaa );
 				}
@@ -1690,11 +1728,12 @@ function StartDSP()
 			else
 			{
 				//Activate ?
-				object_selection.material.emissive.set( 0xcccccccc );
+				//object_selection.material.emissive.set( 0xcccccccc );
 				if (selection.script !== undefined)
 				{
 					selection.script.onClick();
 				}
+				object_selection = undefined;
 				MouseDrag = true;
 			}
 			//console.log("selection set to:", selection);
@@ -1776,8 +1815,6 @@ function StartDSP()
 				}
 			break;
 			case 13: //enter
-			//SendMessageToCurrentSelection();
-			//parameters.createObject();
 				OnChat(chat_input.value);
 				chat_input.value = "";
 			break;
@@ -1813,15 +1850,22 @@ objectsRef.on('child_changed', function (snapshot) {
 	//console.log("changed", object);
 	var selectedObject = space_objects[object.id];//scene.getObjectByName(object.id);
 	selectedObject.remote = object;
-	selectedObject.object3D.position.x = object.x;
-	selectedObject.object3D.position.y = object.y;
-	selectedObject.object3D.position.z = object.z;
-	selectedObject.object3D.rotation.x = object.rotation.x;
-	selectedObject.object3D.rotation.y = object.rotation.y;
-	selectedObject.object3D.rotation.z = object.rotation.z;
-	selectedObject.object3D.material.color.r = object.r;
-	selectedObject.object3D.material.color.g = object.g;
-	selectedObject.object3D.material.color.b = object.b;
+	
+	if (selectedObject.object3D !== undefined)
+	{
+		UpdateLocalObject(selectedObject);
+		/*selectedObject.object3D.position.x = object.x;
+		selectedObject.object3D.position.y = object.y;
+		selectedObject.object3D.position.z = object.z;
+		selectedObject.object3D.rotation.x = object.rotation.x;
+		selectedObject.object3D.rotation.y = object.rotation.y;
+		selectedObject.object3D.rotation.z = object.rotation.z;
+		selectedObject.object3D.material.color.r = object.r;
+		selectedObject.object3D.material.color.g = object.g;
+		selectedObject.object3D.material.color.b = object.b;
+		*/
+	}
+	
 });
 
 objectsRef.on('child_added', function (snapshot) {
@@ -1830,25 +1874,29 @@ objectsRef.on('child_added', function (snapshot) {
 
 	var newobj = {};
 	newobj.remote = object;
+	space_objects[object.id] = newobj;
+
+	var category = 0;
+	if (newobj.remote.kind === "avatar")
+	{
+		category = 2;
+	}
+	else if (newobj.remote.kind === "sound")
+	{
+		category = 0;
+	}
+	else
+	{
+		category = 1;
+	}
+	PlotOnMinimap(newobj.remote, category);
 	
 	//3D/audio object
+	/*
 	newobj.object3D = createObject(object);
 	objects.push(newobj.object3D);
 	objects_main[newobj.object3D.uuid] = newobj;
 	
-	space_objects[object.id] = newobj;
-
-	if (object.id === avatarname)
-	{
-		//this avatar, we update camera with the last known position
-		camera.position.x = object.x;
-		camera.position.y = object.y;
-		camera.position.z = object.z;
-		camera.rotation.x = object.rotation.x;
-		camera.rotation.y = object.rotation.y;
-		camera.rotation.z = object.rotation.z;
-	}
-
 	//scripting
 	if (newobj.remote.playing)
 	{
@@ -1857,7 +1905,13 @@ objectsRef.on('child_added', function (snapshot) {
 		eval(newobj.remote.script); //using eval
 		newobj.script = script;
 	}
-	
+	*/
+
+	if (object.id === avatarname)
+	{
+		//this avatar, we update camera with the last known position
+		UpdateLocalCamera(newobj.remote);
+	}
 });
 
 
@@ -2098,6 +2152,40 @@ function SendMessageToCurrentSelection()
 }
 
 
+
+
+function UpdateLocalObject(object)
+{
+	object.object3D.position.x = object.remote.x;
+	object.object3D.position.y = object.remote.y;
+	object.object3D.position.z = object.remote.z;
+	object.object3D.rotation.x = object.remote.rotation.x;
+	object.object3D.rotation.y = object.remote.rotation.y;
+	object.object3D.rotation.z = object.remote.rotation.z;
+	object.object3D.material.color.r = object.remote.r;
+	object.object3D.material.color.g = object.remote.g;
+	object.object3D.material.color.b = object.remote.b;
+}
+
+function UpdateLocalCamera(object)
+{
+	//this avatar, we update camera with the last known position
+	camera.position.x = object.remote.x;
+	camera.position.y = object.remote.y;
+	camera.position.z = object.remote.z;
+	camera.rotation.x = object.remote.rotation.x;
+	camera.rotation.y = object.remote.rotation.y;
+	camera.rotation.z = object.remote.rotation.z;
+}
+
+
+function GetDistance2(object1, object2)
+{
+	var dx = object1.x-object2.x;
+	var dy = object1.y-object2.y;
+	var dz = object1.z-object2.z;
+	return dx*dx+dy*dy+dz*dz;
+}
 
 
 var fAudioSources;
@@ -2372,4 +2460,54 @@ window.addEventListener("gamepadconnected", function( event ) {
 
 	
 });
+
+
+function RenderMinimap()
+{
+	if (ctx_minimap !== undefined)
+	{
+		ctx_minimap.fillStyle = '#000';
+		ctx_minimap.fillRect(0, 0, ctx_minimap.canvas.width, ctx_minimap.canvas.height);
+		for (var j in space_objects)
+		{
+			var target = space_objects[j];
+			var category = 0;
+			if (target.remote.kind === "avatar")
+			{
+				category = 2;
+			}
+			else if (target.remote.kind === "sound")
+			{
+				category = 0;
+				PlotOnMinimap(target.remote, category);
+			}
+			else
+			{
+				category = 1;
+				PlotOnMinimap(target.remote, category);
+			}
+			
+		}
+		PlotOnMinimap(camera.position, 3);
+	}
+
+
+}
+
+function PlotOnMinimap(worldposition, category)
+{
+	if (category === 0)
+		ctx_minimap.fillStyle = '#F00';
+	else if (category === 1)
+		ctx_minimap.fillStyle = '#0F0';
+	else if (category === 2)
+		ctx_minimap.fillStyle = '#00F';
+	else if (category === 3)
+		ctx_minimap.fillStyle = '#FFF';
+	//1pixel-100m scale
+	var nx = Math.floor(100+(-worldposition.x)/50+0.5);
+	var ny = Math.floor(100+(-worldposition.z)/50+0.5);
+	ctx_minimap.fillRect(nx-1, ny-1, 3, 3);
+
+}
 
