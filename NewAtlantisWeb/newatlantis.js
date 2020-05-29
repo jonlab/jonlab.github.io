@@ -396,7 +396,7 @@ fogColor = new THREE.Color(0x001133);
 //scene.background = fogColor;
 //scene.fog = new THREE.Fog(fogColor, 0.0025, 20);
 //scene.fog.density = 0;
-
+//scene.fog = new THREE.Fog(fogColor, 100, 200);
 
 //cells of 10ksqm
 /*
