@@ -1876,7 +1876,7 @@ objectsRef.on('child_added', function (snapshot) {
 	newobj.remote = object;
 	space_objects[object.id] = newobj;
 
-	var category = 0;
+	/*var category = 0;
 	if (newobj.remote.kind === "avatar")
 	{
 		category = 2;
@@ -1890,6 +1890,7 @@ objectsRef.on('child_added', function (snapshot) {
 		category = 1;
 	}
 	PlotOnMinimap(newobj.remote, category);
+	*/
 	
 	//3D/audio object
 	/*
@@ -1910,7 +1911,7 @@ objectsRef.on('child_added', function (snapshot) {
 	if (object.id === avatarname)
 	{
 		//this avatar, we update camera with the last known position
-		UpdateLocalCamera(newobj.remote);
+		UpdateLocalCamera(newobj);
 	}
 });
 
