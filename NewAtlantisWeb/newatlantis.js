@@ -20,6 +20,15 @@ var MouseDrag = false;
 var ObjectDrag = false;
 var control;
 
+var logx = 0;
+var logy = 10;
+var log_dirty = false;
+
+var minimap_dirty = false;
+var network_activity = 0;
+
+var midi = null;  // global MIDIAccess object
+
 //freesound
 //https://freesound.org/docs/api/overview.html
 //https://freesound.org/apiv2/search/text/?query=piano&token=IcsqGmC1CiYHNtyWpZ4ETJFHb8OM5QhzZYb3AzGj
@@ -75,6 +84,8 @@ var ctx_minimap;
 var run_button;
 var stop_script_button;
 var listener_filter;
+
+var loading_threshold = 200;
 
 var Inspector = function() 
 {
@@ -255,8 +266,7 @@ var Inspector = function()
   parameters = new Inspector();
 
 
-var logx = 0;
-var logy = 10;
+
 function Log(message, color) 
 {
 	var m = {};
@@ -288,26 +298,35 @@ function Log(message, color)
 	}
 	logs.push(m);
 
-	//rerender
-
-	ctx.fillStyle = '#000';
-	ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-	logy = 10;
+	log_dirty = true;
 	
-	var end = logs.length-1;
-	var count = 21;
-	var start =  end-count;
-	if (start < 0)
-		start = 0;
-	for (var l=start;l<=end;++l)
-	{
-		var m = logs[l];
-		ctx.fillStyle = m.color;
-		ctx.fillText(m.text, logx, logy );
-		logy+=10;
-	}
 }
 
+
+function UpdateLog()
+{
+	//rerender if needs to
+	if (log_dirty)
+	{
+		log_dirty = false;
+		ctx.fillStyle = '#000';
+		ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+		logy = 10;
+		
+		var end = logs.length-1;
+		var count = 21;
+		var start =  end-count;
+		if (start < 0)
+			start = 0;
+		for (var l=start;l<=end;++l)
+		{
+			var m = logs[l];
+			ctx.fillStyle = m.color;
+			ctx.fillText(m.text, logx, logy );
+			logy+=10;
+		}
+	}
+}
 function _Log(message, color) 
 {
 	
@@ -715,10 +734,11 @@ function animate() {
 			firebase.database().ref('spaces/test/objects/' + avatarname).set(obj);
 		}
 	}
+	
 
 
 	//streaming
-	var loading_threshold = 200;
+	
 	var loading_threshold2 = loading_threshold*loading_threshold;
 	for (var j in space_objects)
 	{
@@ -842,8 +862,15 @@ function animate() {
 	}
 
 	renderer.render(scene, camera);
-
-	RenderMinimap();
+	UpdateLog();
+	if (avatar_dirty)
+	{
+		minimap_dirty = true;
+		network_activity++;
+		avatar_dirty = false;
+	}
+	
+	UpdateMinimap();
 	stats.end();
 	
 }
@@ -1370,7 +1397,7 @@ function UpdateSelection()
 		selection.remote.scale.x = selection.object3D.scale.x;
 		selection.remote.scale.y = selection.object3D.scale.y;
 		selection.remote.scale.z = selection.object3D.scale.z;
-		console.log("update selection", selection);
+		//console.log("update selection", selection);
 		firebase.database().ref('spaces/test/objects/' + selection.remote.id).set(selection.remote);
 	}
 }
@@ -1653,6 +1680,29 @@ function StartDSP()
 
 	
 
+	function onMIDISuccess( midiAccess ) {
+	Log( "MIDI ready!" , 1);
+	
+
+	midi = midiAccess;  // store in the global (in real usage, would probably keep in an object instance)
+	//listInputsAndOutputs(midi);
+	startLoggingMIDIInput(midi);
+	}
+
+	function onMIDIFailure(msg) {
+	Log( "Failed to get MIDI access - " + msg , 3);
+	}
+
+	if (typeof navigator.requestMIDIAccess === 'function')
+	{
+		navigator.requestMIDIAccess().then( onMIDISuccess, onMIDIFailure );
+	}
+	else
+	{
+		Log( "Failed to get MIDI access", 3);
+	}
+	
+
 
 	Login();
 	Log("Welcome to New Atlantis...", 0);
@@ -1710,8 +1760,18 @@ function StartDSP()
 		{
 			var last_selection = selection;
 			object_selection = intersections[ 0 ].object;
+			
 			selection = objects_main[object_selection.uuid];
-				
+			//console.log("intersect with:",object_selection);
+			//console.log("selection:",selection);	
+			//get the first parent that is a NA object
+			while (selection === undefined || object_selection.parent == undefined)
+			{
+				object_selection = object_selection.parent;
+				selection = objects_main[object_selection.uuid];
+				//console.log("intersect with:",object_selection);
+				//console.log("selection:",selection);	
+			}
 			if (parameters.editMode)
 			{
 				ObjectDrag = true;
@@ -1881,6 +1941,8 @@ objectsRef.on('child_changed', function (snapshot) {
 	{
 		UpdateLocalObject(selectedObject);
 	}
+	minimap_dirty = true;
+	network_activity++;
 });
 
 
@@ -1899,6 +1961,8 @@ objectsRef.on('child_added', function (snapshot) {
 	{
 		avatars.push(object.name);
 	}
+	minimap_dirty = true;
+	network_activity++;
 });
 
 
@@ -1924,6 +1988,8 @@ objectsRef.on('child_removed', function (snapshot) {
 		selectedObject.object3D.audio.source = null;
 		selectedObject.object3D.audio.panner = null;
 	}
+	minimap_dirty = true;
+	network_activity++;
 	//FIXME : delete ?	
 });
 
@@ -2379,6 +2445,15 @@ else if (arg === "stats")
 	
 	return;
 }
+else if (arg.startsWith("distance"))
+{
+	var res = arg.split(' ');
+	loading_threshold = res[1];
+	Log("command distance returned:", 2);
+	Log("loading_threshold set to: " + loading_threshold, 0);
+
+	return;
+}
 
 
 
@@ -2443,8 +2518,12 @@ window.addEventListener("gamepadconnected", function( event ) {
 
 
 
-function RenderMinimap()
+function UpdateMinimap()
 {
+	if (!minimap_dirty)
+		return;
+
+	minimap_dirty = false;
 	if (ctx_minimap !== undefined)
 	{
 		ctx_minimap.fillStyle = '#000';
@@ -2467,7 +2546,20 @@ function RenderMinimap()
 			}
 			PlotOnMinimap(target.remote, category);
 		}
-		PlotOnMinimap(camera.position, 3);
+		//Log(network_activity);
+		//PlotOnMinimap(camera.position, 3);
+
+		PlotOnMinimap(camera.position, network_activity%9);
+		/*
+		var pos={};
+		pos.x = 0;
+		pos.y = 0;
+		pos.z = 0;
+
+		PlotOnMinimap(pos, network_activity%4);
+		*/
+		
+		
 	}
 }
 
@@ -2482,10 +2574,122 @@ function PlotOnMinimap(worldposition, category)
 		ctx_minimap.fillStyle = '#00F';
 	else if (category === 3)
 		ctx_minimap.fillStyle = '#FFF';
+	else if (category === 4)
+		ctx_minimap.fillStyle = '#FF0';
+	else if (category === 5)
+		ctx_minimap.fillStyle = '#0FF';
+	else if (category === 6)
+		ctx_minimap.fillStyle = '#F0F';
+	else if (category === 7)
+		ctx_minimap.fillStyle = '#7F7';
+	else if (category === 8)
+		ctx_minimap.fillStyle = '#F7F';
 	//1pixel-100m scale
 	var nx = Math.floor(100+(-worldposition.x)/50+0.5);
 	var ny = Math.floor(100+(-worldposition.z)/50+0.5);
 	ctx_minimap.fillRect(nx-1, ny-1, 3, 3);
 
 }
+
+
+
+//MIDI support
+
+function listInputsAndOutputs( midiAccess ) 
+{
+	console.log(midiAccess.inputs);
+	for (var input in midiAccess.inputs) {
+	  Log( "Input port [type:'" + input.type + "'] id:'" + input.id +
+		"' manufacturer:'" + input.manufacturer + "' name:'" + input.name +
+		"' version:'" + input.version + "'" , 0);
+	}
+  
+	for (var output in midiAccess.outputs) {
+		console.log(midiAccess.outputs);
+	  Log( "Output port [type:'" + output.type + "'] id:'" + output.id +
+		"' manufacturer:'" + output.manufacturer + "' name:'" + output.name +
+		"' version:'" + output.version + "'" , 0);
+	}
+  }
+
+  function onMIDIMessage( event ) 
+  {
+	  // Mask off the lower nibble (MIDI channel, which we don't care about)
+  switch (event.data[0] & 0xf0) {
+    case 0x90:
+	  if (event.data[2]!=0) 
+	  {  // if velocity != 0, this is a note-on message
+		//MidiNoteOn(event.data[1]);
+		var channel = event.data[0]-144;
+		Log("NoteOn " + channel + " " + event.data[1] + " " + event.data[2], 1);
+      
+	  }
+	  break;
+      // if velocity == 0, fall thru: it's a note-off.  MIDI's weird, y'all.
+    case 0x80:
+		var channel = event.data[0]-128;
+	  //MidiNoteOff(event.data[1]);
+	  Log("NoteOff " + channel + " " + event.data[1] + " " + event.data[2], 2);
+	  
+	  break;
+	case 0xB0:
+		var channel = event.data[0]-176;
+		Log("ControlChange " + channel + " " + event.data[1] + " " + event.data[2], 4);
+		break;
+
+  }
+
+
+	/*var str = "MIDI message received at timestamp " + event.timestamp + "[" + event.data.length + " bytes]: ";
+	for (var i=0; i<event.data.length; i++) {
+	  str += "0x" + event.data[i].toString(16) + " ";
+	}
+	console.log( str );
+	*/
+  }
+
+
+  function MidiNoteOn(noteNumber) 
+  {
+	/*activeNotes.push( noteNumber );
+	oscillator.frequency.cancelScheduledValues(0);
+	oscillator.frequency.setTargetAtTime( frequencyFromNoteNumber(noteNumber), 0, portamento );
+	envelope.gain.cancelScheduledValues(0);
+	envelope.gain.setTargetAtTime(1.0, 0, attack);
+	*/
+  }
+  
+  function MidiNoteOff(noteNumber) {
+	/*var position = activeNotes.indexOf(noteNumber);
+	if (position!=-1) {
+	  activeNotes.splice(position,1);
+	}
+	if (activeNotes.length==0) {  // shut off the envelope
+	  envelope.gain.cancelScheduledValues(0);
+	  envelope.gain.setTargetAtTime(0.0, 0, release );
+	} else {
+	  oscillator.frequency.cancelScheduledValues(0);
+	  oscillator.frequency.setTargetAtTime( frequencyFromNoteNumber(activeNotes[activeNotes.length-1]), 0, portamento );
+	}
+	*/
+  }
+  
+  function startLoggingMIDIInput( midiAccess, indexOfPort ) {
+	midiAccess.inputs.forEach( function(entry) 
+	{
+		console.log(entry);
+		Log(entry.name, 0);
+		entry.onmidimessage = onMIDIMessage;
+	}
+	);
+  }
+
+  function sendMiddleC( midiAccess, portID ) {
+	var noteOnMessage = [0x90, 60, 0x7f];    // note on, middle C, full velocity
+	var output = midiAccess.outputs.get(portID);
+	output.send( noteOnMessage );  //omitting the timestamp means send immediately.
+	output.send( [0x80, 60, 0x40], window.performance.now() + 1000.0 ); // Inlined array creation- note off, middle C,  
+																		// release velocity = 64, timestamp = now + 1000ms.
+  }
+
 
