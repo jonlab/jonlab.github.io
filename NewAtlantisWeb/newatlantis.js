@@ -19,14 +19,14 @@ var MovingRight = false;
 var MouseDrag = false;
 var ObjectDrag = false;
 var control;
-
+var spawn_distance = 3;
 var logx = 0;
 var logy = 10;
 var log_dirty = false;
 
 var minimap_dirty = false;
 var network_activity = 0;
-
+var frame = 0;
 var midi = null;  // global MIDIAccess object
 
 //freesound
@@ -39,7 +39,7 @@ var controller_createfreesound;
 var scene; //Three js 3D scene
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
-
+var cursor;
 var physics;
 
 var avatarname = "";
@@ -87,13 +87,17 @@ var listener_filter;
 
 var loading_threshold = 200;
 
+
+
+
+
+
 var Inspector = function() 
 {
 	this.editMode = false;
 	this.advancedMode = true;
 	this.position = "";
 	this.poi = '{"x":0,"y":1,"z":0}';
-	
 	this.distance = 400;
 	this.inclination = 0.1; //0.49
 	this.azimuth = 0.99; //0.205
@@ -101,8 +105,6 @@ var Inspector = function()
 	this.name = "untitled";
 	this.URL = 'http://locus.creacast.com:9001/le-rove_niolon.mp3';
 	this.search = "seagull";
-	//this.speed = 0.8;
-	//this.displayOutline = false;
 	this.color = [ 0, 128, 255 ]; // RGB array
 	this.volume = 0.5;
 	this.source = "sounds/banque/elements/eau.mp3";
@@ -110,6 +112,8 @@ var Inspector = function()
 	this.patch = "pd/adc_osc.pd";
 	this.ir = "IR/1_tunnel_souterrain.wav";
 	this.freesound = "";
+
+
 	this.update = function() {
 		alert("update");
 	};
@@ -182,6 +186,7 @@ var Inspector = function()
 		{
 			var result = JSON.parse(req.response);
 			//console.log("freesound returned:", result);
+			//construct the results UI
 			var freesound_list = {};
 			for (var i in result.results)
 			{
@@ -189,7 +194,6 @@ var Inspector = function()
 				freesound_list[entry.name] = entry.previews['preview-hq-mp3'];
 				
 			}
-			
 			if (controller_freesound !== undefined)
 				controller_freesound.remove();
 			if (controller_createfreesound !== undefined)
@@ -259,8 +263,6 @@ var Inspector = function()
 	this.teleport = function() {
 		Teleport(this.poi);
 	};
-
-
   };
   
   parameters = new Inspector();
@@ -403,6 +405,7 @@ document.body.appendChild( stats.dom );
 
 scene = new THREE.Scene();
 camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
+scene.add(camera);
 renderer = new THREE.WebGLRenderer();
 onWindowResize();
 renderer.setClearColor(new THREE.Color(0x0088ff), 1);
@@ -442,6 +445,19 @@ camera.position.y = 3;
 
 camera.rotation.y = Math.PI/2;
 
+//cursor
+//var geometryCursor = new THREE.SphereBufferGeometry(0.02, 16, 8);
+//var geometryCursor = new THREE.RingBufferGeometry( 0.05, 0.06, 32 );
+var geometryCursor = new THREE.BoxGeometry( 0.02, 0.02, 0.02 );
+
+var materialCursor = new THREE.MeshBasicMaterial({ color: 0xffffff });
+cursor = new THREE.Mesh(geometryCursor, materialCursor);
+cursor.position.x = 0;
+cursor.position.y = 0;
+cursor.position.z = -spawn_distance;
+camera.add(cursor);	
+
+
 //var light = new THREE.PointLight(0xffffff, 1, 100);
 var light = new THREE.DirectionalLight( 0xffffff, 1 );
 //var light = new THREE.DirectionalLight( 0xffffff, 1.0 );
@@ -457,6 +473,8 @@ scene.add(light);
 
 var axesHelper = new THREE.AxesHelper(1);
 scene.add(axesHelper);
+
+
 
 // Water
 var waterGeometry = new THREE.PlaneBufferGeometry( 10000, 10000 );
@@ -535,11 +553,6 @@ listener_filter = biquad;
 
 //loaders
 gltfLoader = new GLTFLoader();
-//Flamingo.glb
-//Parrot.glb
-//Duck.glb
-//Flower.glb
-
 fontLoader = new THREE.FontLoader();
 fontLoader.load( 'fonts/helvetiker_bold.typeface.json', function ( _font ) 
 {
@@ -547,6 +560,17 @@ fontLoader.load( 'fonts/helvetiker_bold.typeface.json', function ( _font )
 });
   
 window.addEventListener('resize', onWindowResize, false);
+
+
+
+
+
+
+
+
+
+
+
 
 function Login()
 {
@@ -570,8 +594,16 @@ function AddGroundPlane(x,y,z,sizex, sizez)
 	scene.add(plane);
 }
 
+
+
+
+
 function animate() {
 	requestAnimationFrame(animate);
+	frame++;
+	if (frame%2!==0) //cap to 30 FPS
+	return;
+
 	stats.begin();
 	var deadzone = 0.1;
 	var dt = 1/60;
@@ -756,7 +788,12 @@ function animate() {
 			{
 				var script = {};
 				script.target = target;
-				eval(target.remote.script); //using eval
+				//eval.call(target.remote.script, script); //using eval
+				//eval(target.remote.script); //using eval
+				var result = function(str){
+					return eval(str);
+				  }.call(script,target.remote.script);
+
 				target.script = script;
 			}
 
@@ -789,6 +826,7 @@ function animate() {
 			catch (exception)
 			{
 				Log(exception,3);
+				Log(target.remote.kind + ":" + target.remote.name);
 				target.remote.playing = false;
 			}
 		}
@@ -1013,6 +1051,7 @@ function createObject(o)
 	var display_text = "";
 	//texte
 	//if (o.kind === "avatar")// || o.kind === "stream" || o.kind === "sound")
+	if (o.kind === "avatar" || o.kind === "resonator")
 	{
 		if (o.name !== undefined)
 		{
@@ -1483,7 +1522,7 @@ function getNewObjectCommand(kind)
 	var obj = {};
 	obj.kind = kind;
 	obj.id = obj_id;
-	var spawn_distance = 3;
+	
 	obj.x = camera.position.x + dir.x * spawn_distance;
 	obj.y = camera.position.y + dir.y * spawn_distance;
 	obj.z = camera.position.z + dir.z * spawn_distance;
@@ -1708,6 +1747,9 @@ function StartDSP()
 	Log("Welcome to New Atlantis...", 0);
 	Log("If you have a gamepad, press any button to activate and calibrate it!", 0);
 
+
+	TestEval();
+
 	if (avatarname === "")
 		Log("You are spectator", 2)
 	else
@@ -1730,7 +1772,7 @@ function StartDSP()
 		// Handle Errors here.
 		var errorCode = error.code;
 		var errorMessage = error.message;
-		// ...
+		//Log(errorMessage, 3);
 	  });
 	firebase.analytics();
 	//console.log("firebase", firebase);
@@ -1760,6 +1802,9 @@ function StartDSP()
 		{
 			var last_selection = selection;
 			object_selection = intersections[ 0 ].object;
+			var object_name = object_selection.name;
+			Log("clicked on " + object_selection.name, 2);
+			//console.log(object_selection);
 			
 			selection = objects_main[object_selection.uuid];
 			//console.log("intersect with:",object_selection);
@@ -1786,7 +1831,14 @@ function StartDSP()
 					//Activate ?
 					if (last_selection === selection && selection.script !== undefined)
 					{
-						selection.script.onClick();
+						try
+						{
+							selection.script.onClick(object_name);
+						}
+						catch (exception)
+						{
+							Log(exception, 3);
+						}
 					}
 
 					if (last_selection === selection)
@@ -1829,7 +1881,14 @@ function StartDSP()
 				//object_selection.material.emissive.set( 0xcccccccc );
 				if (selection !== undefined && selection.script !== undefined)
 				{
-					selection.script.onClick();
+					try
+					{
+						selection.script.onClick(object_name);
+					}
+					catch (exception)
+					{
+						Log(exception, 3);
+					}
 				}
 				object_selection = undefined;
 				MouseDrag = true;
@@ -1918,8 +1977,8 @@ function StartDSP()
 				chat_input.value = "";
 			break;
 			case 17: //control
-				ScriptCurrentSelection();
-				UpdateSelection();
+				//ScriptCurrentSelection();
+				//UpdateSelection();
 			break;
 			case 16: //shift
 				avatar_speed = 340;
@@ -2155,7 +2214,11 @@ function ScriptCurrentSelection()
 
 	var script = {};
 	script.target = target;
-	eval(selection.remote.script); //using eval
+	//eval(selection.remote.script); //using eval
+
+	var result = function(str){
+		return eval(str);
+	  }.call(script,selection.remote.script);
 	selection.script = script;
 				
 	//eval(selection.remote.script); //test
@@ -2691,5 +2754,24 @@ function listInputsAndOutputs( midiAccess )
 	output.send( [0x80, 60, 0x40], window.performance.now() + 1000.0 ); // Inlined array creation- note off, middle C,  
 																		// release velocity = 64, timestamp = now + 1000ms.
   }
+
+
+function TestEval()
+{
+	var code = 'console.log("script execute");Log("log from script");this.a = "a"; this.test = function(){console.log("test");console.log(this.a);};console.log(this);console.log("global scene:",scene);console.log("script execute end");';
+	var script = {}; //context
+	script.target = "target";
+	//eval.call(script, code); //using eval
+	//eval(code); //using eval
+	//eval(target.remote.script); //using eval
+	var result = function(str){
+		return eval(str);
+	  }.call(script,code);
+
+	  script.test();
+	console.log("script=", script);
+				
+
+}
 
 
