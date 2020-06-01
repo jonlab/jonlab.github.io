@@ -936,6 +936,7 @@ function getNoise(duration)
 
 
 
+
 function roundDown(number, decimals) {
     decimals = decimals || 0;
     return ( Math.floor( number * Math.pow(10, decimals) ) / Math.pow(10, decimals) );
@@ -1819,10 +1820,12 @@ function StartDSP()
 			var last_selection = selection;
 			object_selection = intersections[ 0 ].object;
 			var object_name = object_selection.name;
-			Log("clicked on " + object_selection.name, 2);
+			
 			//console.log(object_selection);
 			
 			selection = objects_main[object_selection.uuid];
+			
+			
 			//console.log("intersect with:",object_selection);
 			//console.log("selection:",selection);	
 			//get the first parent that is a NA object
@@ -1833,6 +1836,7 @@ function StartDSP()
 				//console.log("intersect with:",object_selection);
 				//console.log("selection:",selection);	
 			}
+			Log("clicked on " + selection.remote.name + " :: " + object_name, 2);
 			if (parameters.editMode)
 			{
 				ObjectDrag = true;
@@ -2707,6 +2711,17 @@ function listInputsAndOutputs( midiAccess )
 		//MidiNoteOn(event.data[1]);
 		var channel = event.data[0]-144;
 		Log("NoteOn " + channel + " " + event.data[1] + " " + event.data[2], 1);
+		if (selection !== undefined && selection.script !== undefined)
+		{
+			try
+			{
+				selection.script.onMidiNoteOn(channel, event.data[1], event.data[2]);
+			}
+			catch (exception)
+			{
+				Log(exception, 3);
+			}
+		}
       
 	  }
 	  break;
@@ -2715,11 +2730,32 @@ function listInputsAndOutputs( midiAccess )
 		var channel = event.data[0]-128;
 	  //MidiNoteOff(event.data[1]);
 	  Log("NoteOff " + channel + " " + event.data[1] + " " + event.data[2], 2);
-	  
+	  if (selection !== undefined && selection.script !== undefined)
+		{
+			try
+			{
+				selection.script.onMidiNoteOff(channel, event.data[1], event.data[2]);
+			}
+			catch (exception)
+			{
+				Log(exception, 3);
+			}
+		}
 	  break;
 	case 0xB0:
 		var channel = event.data[0]-176;
 		Log("ControlChange " + channel + " " + event.data[1] + " " + event.data[2], 4);
+		if (selection !== undefined && selection.script !== undefined)
+		{
+			try
+			{
+				selection.script.onMidiControlChange(channel, event.data[1], event.data[2]);
+			}
+			catch (exception)
+			{
+				Log(exception, 3);
+			}
+		}
 		break;
 
   }
