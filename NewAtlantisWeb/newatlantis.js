@@ -85,7 +85,7 @@ var run_button;
 var stop_script_button;
 var listener_filter;
 
-var loading_threshold = 200;
+var loading_threshold = 500;
 
 
 
@@ -732,7 +732,7 @@ function animate() {
 		scene.fog = undefined;*/
 	}
 	
-	parameters.position = ""+roundDown(camera.position.x, 2)+";"+roundDown(camera.position.y,2)+";"+roundDown(camera.position.z,2);
+	
 	//send avatar position to the server
 	var send_interval = 0.05;
 	if (avatarname !== "" && avatar_dirty && main_timer > 3)
@@ -762,7 +762,6 @@ function animate() {
 			obj.scale.x = 1;
 			obj.scale.y = 1;
 			obj.scale.z = 1;
-			//parameters.position = ""+roundDown(obj.x, 2)+";"+roundDown(obj.y,2)+";"+roundDown(obj.z,2);
 			firebase.database().ref('spaces/test/objects/' + avatarname).set(obj);
 		}
 	}
@@ -772,6 +771,7 @@ function animate() {
 	//streaming
 	
 	var loading_threshold2 = loading_threshold*loading_threshold;
+	var loading_hysteresis2 = (loading_threshold*2)*(loading_threshold*2);
 	for (var j in space_objects)
 	{
 		var target = space_objects[j];
@@ -800,6 +800,12 @@ function animate() {
 			
 
 		}
+		else if (dist2 > loading_hysteresis2 && target.active)
+		{
+			DeleteObject(target.object3D);
+			target.object3D = undefined;
+			target.active = false;
+		}
 
 	}	
 	//execute scripts on objects
@@ -811,14 +817,6 @@ function animate() {
 		{
 			try
 			{
-				
-				//var script = {};
-				//eval(target.remote.script); //using eval
-				//var script = new Function('script', target.remote.script); //using Function
-				//console.log("script:", script);
-				//if (script !== undefined)
-				//	script.update();
-				//script();
 				if (target.script !== undefined)
 					target.script.update();
 
@@ -828,6 +826,7 @@ function animate() {
 				Log(exception,3);
 				Log(target.remote.kind + ":" + target.remote.name);
 				target.remote.playing = false;
+				console.log("script stopped because of an exception");
 			}
 		}
 		
@@ -852,7 +851,7 @@ function animate() {
 	{
 		var o = space_objects[i];
 		o.convolver = undefined;
-		if (o.active && o.object3D.audio !== undefined && o.object3D.convolver === undefined)
+		if (o.active && o.object3D !== undefined && o.object3D.audio !== undefined && o.object3D.convolver === undefined)
 		{
 			/*
 			if (o.object3D.audio.gain != undefined)
@@ -890,7 +889,7 @@ function animate() {
 	{
 		var o = space_objects[i];
 		//sources in free air, we disconnect
-		if (o.active && o.convolver === undefined && o.object3D.audio !== undefined && o.object3D.audio.gain != undefined)
+		if (o.active && o.object3D !==undefined && o.convolver === undefined && o.object3D.audio !== undefined && o.object3D.audio.gain != undefined)
 		{
 
 			o.object3D.audio.gain.disconnect();
@@ -994,6 +993,10 @@ function createObject(o)
 	{	
 		geometry = new THREE.CylinderGeometry( 40, 50, 2, 64 );
 	}
+	else if (o.kind === "light")
+	{	
+		geometry = new THREE.SphereBufferGeometry( 0.1, 12, 6);
+	}
 	else 
 	{
 		geometry = new THREE.SphereBufferGeometry(0.5,12,6);
@@ -1001,7 +1004,11 @@ function createObject(o)
 	
 	var material = null;
 	
-	if (o.kind === "box" || o.kind === "resonator")
+	if (o.kind === "light")
+	{	
+		material = new THREE.MeshBasicMaterial();
+	}
+	else if (o.kind === "box" || o.kind === "resonator")
 	{
 		material = new THREE.MeshStandardMaterial({transparent:true,opacity:0.5, roughness:0.0});
 	}
@@ -1034,10 +1041,12 @@ function createObject(o)
 		cube.scale.z = o.scale.z;
 	}
 	
-
-	material.color.r = o.r;
-	material.color.g = o.g;
-	material.color.b = o.b;
+	if (o.kind !== "light")
+	{
+		material.color.r = o.r;
+		material.color.g = o.g;
+		material.color.b = o.b;
+	}
 
 	if (o.kind !== "box" && o.kind !== "resonator")
 	{
@@ -1051,7 +1060,7 @@ function createObject(o)
 	var display_text = "";
 	//texte
 	//if (o.kind === "avatar")// || o.kind === "stream" || o.kind === "sound")
-	if (o.kind === "avatar" || o.kind === "resonator")
+	//if (o.kind === "avatar" || o.kind === "resonator")
 	{
 		if (o.name !== undefined)
 		{
@@ -1081,7 +1090,14 @@ function createObject(o)
 			//console.log("text", text);
 	}
 
-	if (o.kind === "avatar")
+
+
+	if (o.kind === "light")
+	{
+		var light = new THREE.PointLight(0xffffff, 1, 30, 2);
+		cube.add(light);
+	}
+	else if (o.kind === "avatar")
 	{
 		//avatar flashlight
 		//HERE
@@ -1748,7 +1764,7 @@ function StartDSP()
 	Log("If you have a gamepad, press any button to activate and calibrate it!", 0);
 
 
-	TestEval();
+	//TestEval();
 
 	if (avatarname === "")
 		Log("You are spectator", 2)
@@ -1866,7 +1882,8 @@ function StartDSP()
 				else*/
 				if (object_selection !== undefined)
 				{
-					object_selection.material.emissive.set( 0xaaaaaaaa );
+					if (object_selection.material.emissive != undefined)
+						object_selection.material.emissive.set( 0xaaaaaaaa );
 				}
 
 				if (selection !== undefined)
@@ -1899,7 +1916,8 @@ function StartDSP()
 		{
 			if (object_selection !== undefined)
 			{
-				object_selection.material.emissive.set( 0x00000000 );
+				if (object_selection.material.emissive != undefined)
+					object_selection.material.emissive.set( 0x00000000 );
 				object_selection = undefined;
 			}
 			control.detach();
@@ -1917,7 +1935,8 @@ function StartDSP()
 		ObjectDrag = false;
 		if (object_selection !== undefined)
 		{
-			object_selection.material.emissive.set( 0x00000000 );
+			if (object_selection.material.emissive != undefined)
+				object_selection.material.emissive.set( 0x00000000 );
 			object_selection = undefined;
 		}
 	}, false);
@@ -2031,25 +2050,12 @@ objectsRef.on('child_removed', function (snapshot) {
 	//console.log("removed", object);
 	var selectedObject = space_objects[object.id];
 	//console.log("removing", selectedObject);
-	scene.remove(selectedObject.object3D);
-	const index = objects.indexOf(selectedObject.object3D);
-	if (index > -1) 
-	{
-		objects.splice(index, 1);
-	}
-	if (selectedObject.object3D.audio !== undefined)
-	{
-		selectedObject.object3D.audio.stop();
-		selectedObject.object3D.audio.gain.disconnect();
-		selectedObject.object3D.audio.source.disconnect();
-		selectedObject.object3D.audio.panner.disconnect();
-		selectedObject.object3D.audio.gain = null;
-		selectedObject.object3D.audio.source = null;
-		selectedObject.object3D.audio.panner = null;
-	}
+	DeleteObject(selectedObject.object3D);
+	selectedObject.object3D = undefined;
+	selectedObject.active = false;
 	minimap_dirty = true;
 	network_activity++;
-	//FIXME : delete ?	
+	delete space_objects[object.id];
 });
 
 
@@ -2121,44 +2127,38 @@ function ActionPatch(url)
 		firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);	
 	}
 	req.send();
-	
 }
 
+/*
 function ActionStream()
 {
-
 	var obj= getNewObjectCommand("stream");
-
 	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
 }
 
 function ActionKnot()
 {
-
 	var obj= getNewObjectCommand("knot");
 	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
 }
-
+*/
 function ActionObject(kind)
 {
-
 	var obj= getNewObjectCommand(kind);
 	obj.name = kind;
 	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
 }
 
-
+/*
 function ActionEau()
 {
-
 	var obj= getNewObjectCommand("eau");
-
 	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
 }
+*/
 
 function ActionSound(url)
 {
-
 	var obj= getNewObjectCommand("sound");
 	obj.name = "sound";
 	obj.url = url;
@@ -2173,14 +2173,6 @@ function ActionResonator(ir)
 	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
 }
 
-/*function ActionPatch(url)
-{
-
-	var obj= getNewObjectCommand("sound");
-	obj.name = "sound";
-	obj.url = url;
-	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
-}*/
 
 function DeleteCurrentSelection()
 {
@@ -2475,12 +2467,12 @@ if (arg === "clear")
 	Log("command clear OK!");
 	return;
 }
-else if (arg === "destroyall")
+/*else if (arg === "destroyall")
 {
 	ActionDestroy();
 	Log("command destroyall OK!");
 	return;
-}
+}*/
 else if (arg === "create cube")
 {
 	ActionCube();
@@ -2514,6 +2506,35 @@ else if (arg.startsWith("distance"))
 	loading_threshold = res[1];
 	Log("command distance returned:", 2);
 	Log("loading_threshold set to: " + loading_threshold, 0);
+
+	return;
+}
+
+else if (arg.startsWith("locate"))
+{
+	var res = arg.split(' ');
+	var name = res[1];
+	var found = false;
+	for (var j in space_objects)
+	{
+		var target = space_objects[j];
+		if (target.remote.name === name)
+		{
+			//go there
+			UpdateLocalCamera(target);
+			found = true;
+		}
+	}
+	Log("command locate executed!", 2);
+	if (!found)
+	{
+		Log("object not found!", 3);
+	}
+	else
+	{
+		Log("OK!", 1);
+	}
+	
 
 	return;
 }
@@ -2586,6 +2607,7 @@ function UpdateMinimap()
 	if (!minimap_dirty)
 		return;
 
+	parameters.position = ""+roundDown(camera.position.x, 1)+";"+roundDown(camera.position.y,1)+";"+roundDown(camera.position.z,1);
 	minimap_dirty = false;
 	if (ctx_minimap !== undefined)
 	{
@@ -2774,4 +2796,30 @@ function TestEval()
 
 }
 
+
+function DeleteObject(object3D)
+{
+	scene.remove(object3D);
+	const index = objects.indexOf(object3D);
+	if (index > -1) 
+	{
+		objects.splice(index, 1);
+	}
+	if (object3D.audio !== undefined)
+	{
+		if (object3D.audio.source !== undefined)
+		{
+			object3D.audio.stop();
+		}
+		object3D.audio.gain.disconnect();
+		if (object3D.audio.source !== undefined)
+		{
+			object3D.audio.source.disconnect();
+		}
+		object3D.audio.panner.disconnect();
+		object3D.audio.gain = null;
+		object3D.audio.source = null;
+		object3D.audio.panner = null;
+	}
+}
 

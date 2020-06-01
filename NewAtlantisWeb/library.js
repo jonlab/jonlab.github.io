@@ -45,7 +45,8 @@ var na_library_objects = {
 	knot:'knot',
 	cylinder:'cylinder',
 	cone:'cone',
-	island:'island'
+	island:'island',
+	light: 'light'
 };
 
 /*
@@ -144,7 +145,9 @@ var na_pois =
 	origin:'{"x":0,"y":1,"z":0}',
 	underwater:'{"x":0,"y":-10,"z":0}',
 	ocean_limit:'{"x":5000,"y":1,"z":0}',
-	very_far:'{"x":100000,"y":1,"z":0}'
+	very_far:'{"x":100000,"y":1,"z":0}',
+	voices:'{"x":-1117,"y":10,"z":-2420}',
+	cailloux:'{"x":-1923,"y":4,"z":-994}'
 
 };
 
