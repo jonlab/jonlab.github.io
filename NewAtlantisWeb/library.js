@@ -128,6 +128,21 @@ var na_library_ir = {
 	wharehouse_papeterie_Arles_tail:'IR/lib/wharehouse_papeterie_Arles_tail.wav'
 };
 
+var na_library_fx = {
+	biquad_lowpass:'biquad_lowpass',
+	biquad_highpass:'biquad_highpass',
+	biquad_bandpass:'biquad_bandpass',
+	biquad_lowshelf:'biquad_lowshelf',
+	biquad_highshelf:'biquad_highshelf',
+	biquad_peaking:'biquad_peaking',
+	biquad_notch:'biquad_notch',
+	biquad_allpass:'biquad_allpass',
+	compressor:'compressor',
+	delay:'delay',
+	iir:'iir',
+	waveshaper:'waveshaper'
+};
+
 var na_library_patches = 
 {
 	pd_input_modulation:'pd/adc_osc.pd',

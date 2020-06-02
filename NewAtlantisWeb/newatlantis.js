@@ -111,6 +111,8 @@ var Inspector = function()
 	this.object = "cube";
 	this.patch = "pd/adc_osc.pd";
 	this.ir = "IR/1_tunnel_souterrain.wav";
+	this.fx = "biquad_lowpass";
+
 	this.freesound = "";
 
 
@@ -160,6 +162,12 @@ var Inspector = function()
 	{
 		var ir = this.ir;
 		ActionResonator(ir);
+	};
+
+	this.createBox = function()
+	{
+		var fx = this.fx;
+		ActionBox(fx);
 	};
 	this.createPatch = function()
 	{
@@ -734,7 +742,7 @@ function animate() {
 	
 	
 	//send avatar position to the server
-	var send_interval = 0.05;
+	var send_interval = 0.05; 
 	if (avatarname !== "" && avatar_dirty && main_timer > 3)
 	{
 		
@@ -796,9 +804,6 @@ function animate() {
 
 				target.script = script;
 			}
-
-			
-
 		}
 		else if (dist2 > loading_hysteresis2 && target.active)
 		{
@@ -806,7 +811,6 @@ function animate() {
 			target.object3D = undefined;
 			target.active = false;
 		}
-
 	}	
 	//execute scripts on objects
 	for (var j in space_objects)
@@ -832,13 +836,14 @@ function animate() {
 		
 	}
 
+	//console.log("start");
 
-	//apply reverb?
+	//apply reverb and fxs?
 	//compute all boxes
 	for (var j in space_objects)
 	{
 		var r = space_objects[j];
-		if (r.remote.kind === "resonator" && r.active)
+		if ((r.remote.kind === "resonator" || r.remote.kind === "box") && r.active)
 		{
 			//update bounding box
 			r.bb = new THREE.Box3();
@@ -850,54 +855,112 @@ function animate() {
 	for (var i in space_objects)
 	{
 		var o = space_objects[i];
-		o.convolver = undefined;
-		if (o.active && o.object3D !== undefined && o.object3D.audio !== undefined && o.object3D.convolver === undefined)
+		//initial state as undefined for convolver and fx ownership
+		//o.convolver = undefined;
+		//o.afx = undefined;
+		//console.log("o.afx = " , o.afx);
+		if (o.active && o.object3D !== undefined && o.object3D.audio !== undefined && (o.object3D.convolver === undefined && o.object3D.fx === undefined))
 		{
-			/*
-			if (o.object3D.audio.gain != undefined)
-			{
-				o.object3D.audio.gain.disconnect();
-				o.object3D.audio.gain.connect(o.object3D.audio.listener.getInput());
-				o.object3D.material.emissive.set( 0x00000000 );
-			}
-			*/
+			//we have an active audio source
+			var afx = undefined;
+			var convolver = undefined;
+			
 			for (var j in space_objects)
 			{
 				var r = space_objects[j];
-				if (r.active && r.remote.kind === "resonator")
+				if (r.active && (r.remote.kind === "resonator" || r.remote.kind === "box"))
 				{
-					//check if sound inside box
-					var isInside = r.bb.containsPoint(o.object3D.position);
-					if (isInside && r.object3D.convolver !== undefined && o.object3D.audio.gain != undefined)
+					var isInside = r.bb.containsPoint(o.object3D.position); //check if sound inside box
+					if (isInside && o.object3D.audio.gain != undefined)
 					{
-						//we are inside a convolver zone
-						if (o.convolver !== undefined)
+						if ( r.object3D.convolver !== undefined)
 						{
-							//we have to disconnect first
-							o.object3D.audio.gain.disconnect();
-						}
-						o.convolver = r.object3D.convolver;
-						o.object3D.audio.gain.connect( r.object3D.convolver);
-						//o.object3D.material.emissive.set( 0x77777777 );
-					}	
+							//we are inside a convolver zone
+							if (o.convolver !== r.object3D.convolver)
+							{
+								o.object3D.audio.gain.disconnect(o.convolver); //we have to disconnect first
+								o.convolver = r.object3D.convolver;
+								//console.log("connect to " , o.afx);
+								o.object3D.audio.gain.connect(o.convolver);
+								Log("connect " + o.remote.name + " -> " + r.remote.name + " " + o.convolver);
+							}
+							convolver = o.convolver;
+						}	
+						if (r.object3D.fx !== undefined)
+						{
+							//we are inside a box
+							//console.log("inside box with fx " , r.object3D.fx);
+							//we are inside a box
+							if (o.afx !== r.object3D.fx)
+							{
+								//there was a change 
+								//console.log("disconnect from " , o.afx);
+								o.object3D.audio.gain.disconnect(o.afx); //we have to disconnect first
+								o.afx = r.object3D.fx;
+								//console.log("connect to " , o.afx);
+								o.object3D.audio.gain.connect(o.afx);
+								Log("connect " + o.remote.name + " -> " + r.remote.name + " " + o.afx);
+							}
+							afx = o.afx;
+						}	
+					}
 				}
+			}
+
+			
+			if (afx === undefined && o.afx !== undefined)
+			{
+				//Log("afx is " + afx);
+				Log("disconnect " + o.remote.name + " -> " + r.remote.name + " " + o.afx);
+				try
+				{
+					o.object3D.audio.gain.disconnect(o.afx);
+				}
+				catch (exception)
+				{
+					Log(exception, 3);
+				}
+				//o.object3D.audio.gain.connect(o.object3D.audio.listener.getInput());
+				o.afx = undefined; 
+			}
+			
+			if (convolver === undefined && o.convolver !== undefined)
+			{
+				Log("disconnect " + o.remote.name + " -> " + r.remote.name + " " + o.convolver);
+				try
+				{
+					o.object3D.audio.gain.disconnect(o.convolver);
+				}
+				catch (exception)
+				{
+					Log(exception, 3);
+				}
+				//o.object3D.audio.gain.connect(o.object3D.audio.listener.getInput());
+				o.convolver = undefined; 
+			}
+
+			if (afx === undefined && convolver === undefined)
+			{
+				o.object3D.audio.gain.connect(o.object3D.audio.listener.getInput());
 			}
 		}
 	}
 
-	for (var i in space_objects)
+	/*for (var i in space_objects)
 	{
 		var o = space_objects[i];
-		//sources in free air, we disconnect
-		if (o.active && o.object3D !==undefined && o.convolver === undefined && o.object3D.audio !== undefined && o.object3D.audio.gain != undefined)
+		if (o.active && o.object3D !==undefined && (o.convolver === undefined && o.afx === undefined) && o.object3D.audio !== undefined && o.object3D.audio.gain != undefined)
 		{
-
+			//source in free air (not inside at least 1 resonator), we disconnect it and connect directly to the listener
+			//Log("connect to listener " + o.afx);
 			o.object3D.audio.gain.disconnect();
 			o.object3D.audio.gain.connect(o.object3D.audio.listener.getInput());
-			//o.object3D.material.emissive.set( 0x00000000 );
+			o.convolver = undefined;
+			o.afx = undefined;
 		}
 	}
-
+	*/
+	//console.log("end");
 	renderer.render(scene, camera);
 	UpdateLog();
 	if (avatar_dirty)
@@ -906,10 +969,8 @@ function animate() {
 		network_activity++;
 		avatar_dirty = false;
 	}
-	
 	UpdateMinimap();
 	stats.end();
-	
 }
 
 animate();
@@ -956,7 +1017,7 @@ function createObject(o)
 	}
 	else if (o.kind === "box")
 	{
-		geometry = new THREE.BoxBufferGeometry();
+		geometry = new THREE.BoxBufferGeometry(5,5,5);
 	}
 	else if (o.kind === "sphere")
 	{
@@ -992,7 +1053,8 @@ function createObject(o)
 	}
 	else if (o.kind === "island")
 	{	
-		geometry = new THREE.CylinderGeometry( 40, 50, 2, 64 );
+		//top radius / bottom radius / height
+		geometry = new THREE.CylinderGeometry( 40, 50, 2, 16 );
 	}
 	else if (o.kind === "light")
 	{	
@@ -1136,7 +1198,7 @@ function createObject(o)
 			console.log("PD patch loading exception:", exception);
 		}
 		sound.setRefDistance( 1 );
-		sound.setRolloffFactor(1);
+		sound.setRolloffFactor(1.6);
 		sound.setDistanceModel("exponential");
 		sound.play();
 		cube.add(sound);
@@ -1199,6 +1261,7 @@ function createObject(o)
 			sound.setMediaElementSource( mediaElement );
 			//sound.play(); //no play possible (have to play the Audio directly)
 		}
+		/*
 		else if (o.kind === "eau")
 		{
 			var mediaElement = new Audio("sounds/banque/elements/eau.mp3");
@@ -1207,6 +1270,7 @@ function createObject(o)
 			mediaElement.play();
 			sound.setMediaElementSource( mediaElement );
 		}
+		*/
 		else if (o.kind === "sound")
 		{
 			var audioLoader = new THREE.AudioLoader();
@@ -1230,7 +1294,11 @@ function createObject(o)
 			}
 			);
 			sound.setRefDistance(1);
-			sound.setRolloffFactor(1);
+			sound.setRolloffFactor(1.6);
+			sound.setMaxDistance(10000);
+			sound.panner.panningModel = 'equalpower';
+			//sound.panner.panningModel = 'HRTF';
+			//linear inverse exponential
 			sound.setDistanceModel("exponential");
 			material.wireframe = true;
 		}	
@@ -1245,10 +1313,115 @@ function createObject(o)
 				cube.convolver.buffer = buffer;
 			});
 			sound.setRefDistance( 1 );
-			sound.setRolloffFactor(0);
-			sound.setDistanceModel("linear");
+			sound.setRolloffFactor(1);
+			sound.setDistanceModel("exponential");
 			cube.convolver.connect( sound.listener.getInput() ); //connect to output
 		}	
+		else if (o.kind === "box")
+		{
+			var t = audioContext.currentTime;
+			if (o.fx === "biquad")
+			{
+				cube.fx = audioContext.createBiquadFilter();
+				cube.fx.type = "lowpass";
+				cube.fx.frequency.setValueAtTime(300, t);
+				cube.fx.Q.setValueAtTime(10, t);
+			}
+			else if (o.fx === "biquad_lowpass")
+			{
+				cube.fx = audioContext.createBiquadFilter();
+				cube.fx.type = "lowpass";
+				cube.fx.frequency.setValueAtTime(440, t);
+				cube.fx.Q.setValueAtTime(20, t);
+			}
+			else if (o.fx === "biquad_highpass")
+			{
+				cube.fx = audioContext.createBiquadFilter();
+				cube.fx.type = "highpass";
+				cube.fx.frequency.setValueAtTime(440, t);
+				cube.fx.Q.setValueAtTime(2, t);
+			}
+			else if (o.fx === "biquad_bandpass")
+			{
+				cube.fx = audioContext.createBiquadFilter();
+				cube.fx.type = "bandpass";
+				cube.fx.frequency.setValueAtTime(440, t);
+				cube.fx.Q.setValueAtTime(2, t);
+			}
+
+			else if (o.fx === "biquad_lowshelf")
+			{
+				cube.fx = audioContext.createBiquadFilter();
+				cube.fx.type = "lowshelf";
+				cube.fx.frequency.setValueAtTime(440, t);
+				cube.fx.gain.setValueAtTime(10, t);
+			}
+
+			else if (o.fx === "biquad_highshelf")
+			{
+				cube.fx = audioContext.createBiquadFilter();
+				cube.fx.type = "highshelf";
+				cube.fx.frequency.setValueAtTime(440, t);
+				cube.fx.gain.setValueAtTime(2, t);
+			}
+
+			else if (o.fx === "biquad_peaking")
+			{
+				cube.fx = audioContext.createBiquadFilter();
+				cube.fx.type = "peaking";
+				cube.fx.frequency.setValueAtTime(440, t);
+				cube.fx.Q.setValueAtTime(1, t);
+				cube.fx.gain.setValueAtTime(2, t);
+			}
+
+			else if (o.fx === "biquad_notch")
+			{
+				cube.fx = audioContext.createBiquadFilter();
+				cube.fx.type = "notch";
+				cube.fx.frequency.setValueAtTime(440, t);
+				cube.fx.Q.setValueAtTime(1, t);
+			}
+
+			else if (o.fx === "biquad_allpass")
+			{
+				cube.fx = audioContext.createBiquadFilter();
+				cube.fx.type = "allpass";
+				cube.fx.frequency.setValueAtTime(440, t);
+				cube.fx.Q.setValueAtTime(20, t);
+			}
+
+
+
+			else if (o.fx === "compressor")
+			{
+				cube.fx = audioContext.createDynamicsCompressor();
+				cube.fx.threshold.setValueAtTime(-40, t);
+				cube.fx.knee.setValueAtTime(40, t);
+				cube.fx.ratio.setValueAtTime(10, t);
+				cube.fx.attack.setValueAtTime(0.05, t);
+				cube.fx.release.setValueAtTime(0.3, t);
+			}
+			else if (o.fx === "delay")
+			{
+				cube.fx = audioContext.createDelay(10.0);
+				cube.fx.delayTime.setValueAtTime(0.3, t);
+			}
+			else if (o.fx === "iir")
+			{
+				var feedforward = [0.1,0.1,-0.1,-0.1];
+				var feedback = [0.005,0.005,0,0];
+				cube.fx = audioContext.createIIRFilter(feedforward, feedback);
+			}
+			else if (o.fx === "waveshaper")
+				cube.fx = audioContext.createWaveShaper();
+			sound.setRefDistance(1);
+			sound.setRolloffFactor(1.6);
+			sound.setDistanceModel("exponential");
+			if (cube.fx !== undefined)
+			{
+				cube.fx.connect( sound.listener.getInput() ); //connect to output
+			}
+		}
 		else if (o.kind === "duck")
 		{
 			material.visible = false;
@@ -1260,6 +1433,7 @@ function createObject(o)
 				console.error( error );
 			} );
 		}
+		
 		else if (o.kind === "model")
 		{
 			material.visible = false;
@@ -1672,6 +1846,9 @@ function StartDSP()
 	};
 	elEditor.appendChild(stop_script_button);
 
+	elEditor.addEventListener('mousedown', (event) => {event.stopPropagation();});
+	elInfo.addEventListener('mousedown', (event) => {event.stopPropagation();});
+
 	
 	ctx_minimap = document.createElement('canvas').getContext('2d');
 	elMinimap.appendChild(ctx_minimap.canvas);
@@ -1795,6 +1972,8 @@ function StartDSP()
 	//console.log("firebase", firebase);
 	var val = Math.random();
 
+
+	
 
 	document.addEventListener("touchstart", handleStart, false);
 	document.addEventListener("touchend", handleEnd, false);
@@ -2177,6 +2356,14 @@ function ActionResonator(ir)
 	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
 }
 
+function ActionBox(fx)
+{
+	var obj= getNewObjectCommand("box");
+	obj.name = fx;
+	obj.fx = fx;
+	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
+}
+
 
 function DeleteCurrentSelection()
 {
@@ -2309,7 +2496,7 @@ function CreateGUI()
 	gui.add(parameters, 'startTutorial');
 	fAudioSources = gui.addFolder('Audio Source');
 	f3D = gui.addFolder('3D Object');
-	fBox = gui.addFolder('Box (modifier) (not impl.)');
+	fBox = gui.addFolder('Box (modifier)');
 	fSpace = gui.addFolder('Space (resonator)');
 
 
@@ -2336,12 +2523,19 @@ function CreateGUI()
 	
 	
 
-	fBox.add(parameters, "box1");
-	fBox.add(parameters, "box2");
-	fBox.add(parameters, "box3");
+	//fBox.add(parameters, "box1");
+	//fBox.add(parameters, "box2");
+	//fBox.add(parameters, "box3");
+
+	fBox.add(parameters, "fx", na_library_fx);
+	fBox.add(parameters, "createBox");
+
+
 
 	fSpace.add(parameters, "ir", na_library_ir);
 	fSpace.add(parameters, "createResonator");
+
+
 	
 	
 	f3D.add(parameters, "object", na_library_objects);
