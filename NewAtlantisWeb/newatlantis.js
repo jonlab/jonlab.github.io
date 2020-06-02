@@ -1198,7 +1198,7 @@ function createObject(o)
 			console.log("PD patch loading exception:", exception);
 		}
 		sound.setRefDistance( 1 );
-		sound.setRolloffFactor(1.6);
+		sound.setRolloffFactor(1.5);
 		sound.setDistanceModel("exponential");
 		sound.play();
 		cube.add(sound);
@@ -1294,7 +1294,7 @@ function createObject(o)
 			}
 			);
 			sound.setRefDistance(1);
-			sound.setRolloffFactor(1.6);
+			sound.setRolloffFactor(1.5);
 			sound.setMaxDistance(10000);
 			sound.panner.panningModel = 'equalpower';
 			//sound.panner.panningModel = 'HRTF';
@@ -1395,10 +1395,10 @@ function createObject(o)
 			else if (o.fx === "compressor")
 			{
 				cube.fx = audioContext.createDynamicsCompressor();
-				cube.fx.threshold.setValueAtTime(-40, t);
+				cube.fx.threshold.setValueAtTime(-50, t);
 				cube.fx.knee.setValueAtTime(40, t);
-				cube.fx.ratio.setValueAtTime(10, t);
-				cube.fx.attack.setValueAtTime(0.05, t);
+				cube.fx.ratio.setValueAtTime(20, t);
+				cube.fx.attack.setValueAtTime(0.01, t);
 				cube.fx.release.setValueAtTime(0.3, t);
 			}
 			else if (o.fx === "delay")
@@ -1415,7 +1415,7 @@ function createObject(o)
 			else if (o.fx === "waveshaper")
 				cube.fx = audioContext.createWaveShaper();
 			sound.setRefDistance(1);
-			sound.setRolloffFactor(1.6);
+			sound.setRolloffFactor(1.5);
 			sound.setDistanceModel("exponential");
 			if (cube.fx !== undefined)
 			{
