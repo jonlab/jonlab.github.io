@@ -29,13 +29,11 @@ var network_activity = 0;
 var frame = 0;
 var midi = null;  // global MIDIAccess object
 
-//freesound
-//https://freesound.org/docs/api/overview.html
-//https://freesound.org/apiv2/search/text/?query=piano&token=IcsqGmC1CiYHNtyWpZ4ETJFHb8OM5QhzZYb3AzGj
-//
+//freesound API
 var baseurl_freesoundsearch = "https://freesound.org/apiv2/search/text/?token=IcsqGmC1CiYHNtyWpZ4ETJFHb8OM5QhzZYb3AzGj&fields=previews,description,name&query=";
 var controller_freesound;
 var controller_createfreesound;
+
 var scene; //Three js 3D scene
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
@@ -65,7 +63,7 @@ var audioContext;
 var renderer; //THREE renderer
 var patch;
 var gui;
-var parameters;
+var parameters; //backpack
 var inputFile;
 var fogColor;
 
@@ -87,7 +85,7 @@ var listener_filter;
 
 var loading_threshold = 500;
 
-
+var spawning_point="";
 
 
 
@@ -316,7 +314,7 @@ function Log(message, color)
 function UpdateLog()
 {
 	//rerender if needs to
-	if (log_dirty)
+	if (log_dirty && ctx !== undefined)
 	{
 		log_dirty = false;
 		ctx.fillStyle = '#000';
@@ -433,6 +431,9 @@ control.addEventListener( 'objectChange', OnControlChange );
 scene.add( control );
 
 fogColor = new THREE.Color(0x001133);
+
+
+
 //scene.background = fogColor;
 //scene.fog = new THREE.Fog(fogColor, 0.0025, 20);
 //scene.fog.density = 0;
@@ -447,6 +448,57 @@ for (var x=-200;x<=200;x+=100)
 		AddGroundPlane(x,-10,z,95,95);
 	}
 }*/
+
+
+/*
+var BallWave = function() {
+	this.waveHeight = 0.06;
+	this.castShadow = true;
+	this.color = "";
+	this.explode = function() { };
+	// Define render logic ...
+  };
+  var ballwave = new BallWave();
+  
+  
+
+  
+  var guiVR = dat.GUIVR.create( 'Ball Wave' );
+  guiVR.add(ballwave, 'waveHeight')
+  guiVR.add(ballwave, 'castShadow')
+  guiVR.add(ballwave, 'explode')
+  	// Choose from accepted values
+	  guiVR.add(ballwave, 'color', ["rainbow", "yellow", "red", "blue"]);
+
+  scene.add( guiVR ); // Add GUI to the scene
+
+  guiVR.position.y = 10;
+
+  dat.GUIVR.enableMouse( camera, renderer );
+*/
+  /*
+
+
+
+var BallWave = function() {
+	this.waveHeight = 0.06;
+	this.castShadow = true;
+	this.explode = function() { 
+
+	};
+	
+  };
+  var ballwave = new BallWave();
+  var guiVR = dat.GUIVR.create( 'Ball Wave' );
+  guiVR.add(ballwave, 'waveHeight')
+  guiVR.add(ballwave, 'castShadow')
+  guiVR.add(ballwave, 'explode')
+  
+  scene.add( guiVR ); // Add GUI to the scene
+*/
+  
+
+
 
 camera.position.z = 0;
 camera.position.y = 3;
@@ -538,6 +590,18 @@ updateSun();
 listener = new THREE.AudioListener();
 camera.add(listener);
 audioContext = listener.context;
+
+//URL parameters
+const queryString = window.location.search;
+console.log(queryString);
+const urlParams = new URLSearchParams(queryString);
+if (urlParams !== undefined)
+{
+	spawning_point = urlParams.get('spawn')
+	console.log("spawning_point=" + spawning_point);
+}
+
+
 
 /*
 var compressor = audioContext.createDynamicsCompressor();
@@ -746,6 +810,7 @@ function animate() {
 	if (avatarname !== "" && avatar_dirty && main_timer > 3)
 	{
 		
+
 		send_timer += 1/60;
 		if (send_timer > send_interval)
 		{
@@ -775,41 +840,43 @@ function animate() {
 	}
 	
 
-
+	//Log(spawning_point);
 	//streaming
-	
-	var loading_threshold2 = loading_threshold*loading_threshold;
-	var loading_hysteresis2 = (loading_threshold*2)*(loading_threshold*2);
-	for (var j in space_objects)
+	if (spawning_point === undefined || spawning_point === "" || spawning_point === null)
 	{
-		var target = space_objects[j];
-		var dist2 = GetDistance2(target.remote, camera.position);
-		if (dist2 < loading_threshold2 && !target.active)
+		var loading_threshold2 = loading_threshold*loading_threshold;
+		var loading_hysteresis2 = (loading_threshold*2)*(loading_threshold*2);
+		for (var j in space_objects)
 		{
-			target.active = true;
-			target.object3D = createObject(target.remote);
-			objects.push(target.object3D);
-			objects_main[target.object3D.uuid] = target;
-	
-			//scripting
-			if (target.remote.playing)
+			var target = space_objects[j];
+			var dist2 = GetDistance2(target.remote, camera.position);
+			if (dist2 < loading_threshold2 && !target.active)
 			{
-				var script = {};
-				script.target = target;
-				//eval.call(target.remote.script, script); //using eval
-				//eval(target.remote.script); //using eval
-				var result = function(str){
-					return eval(str);
-				  }.call(script,target.remote.script);
+				target.active = true;
+				target.object3D = createObject(target.remote);
+				objects.push(target.object3D);
+				objects_main[target.object3D.uuid] = target;
+		
+				//scripting
+				if (target.remote.playing)
+				{
+					var script = {};
+					script.target = target;
+					//eval.call(target.remote.script, script); //using eval
+					//eval(target.remote.script); //using eval
+					var result = function(str){
+						return eval(str);
+					}.call(script,target.remote.script);
 
-				target.script = script;
+					target.script = script;
+				}
 			}
-		}
-		else if (dist2 > loading_hysteresis2 && target.active)
-		{
-			DeleteObject(target.object3D);
-			target.object3D = undefined;
-			target.active = false;
+			else if (dist2 > loading_hysteresis2 && target.active)
+			{
+				DeleteObject(target.object3D);
+				target.object3D = undefined;
+				target.active = false;
+			}
 		}
 	}	
 	//execute scripts on objects
@@ -823,7 +890,6 @@ function animate() {
 			{
 				if (target.script !== undefined)
 					target.script.update();
-
 			}
 			catch (exception)
 			{
@@ -833,12 +899,9 @@ function animate() {
 				console.log("script stopped because of an exception");
 			}
 		}
-		
 	}
 
 	//console.log("start");
-
-	//apply reverb and fxs?
 	//compute all boxes
 	for (var j in space_objects)
 	{
@@ -855,9 +918,6 @@ function animate() {
 	for (var i in space_objects)
 	{
 		var o = space_objects[i];
-		//initial state as undefined for convolver and fx ownership
-		//o.convolver = undefined;
-		//o.afx = undefined;
 		//console.log("o.afx = " , o.afx);
 		if (o.active && o.object3D !== undefined && o.object3D.audio !== undefined && (o.object3D.convolver === undefined && o.object3D.fx === undefined))
 		{
@@ -878,9 +938,9 @@ function animate() {
 							//we are inside a convolver zone
 							if (o.convolver !== r.object3D.convolver)
 							{
+								//there was a change
 								o.object3D.audio.gain.disconnect(o.convolver); //we have to disconnect first
 								o.convolver = r.object3D.convolver;
-								//console.log("connect to " , o.afx);
 								o.object3D.audio.gain.connect(o.convolver);
 								Log("connect " + o.remote.name + " -> " + r.remote.name + " " + o.convolver);
 							}
@@ -894,10 +954,8 @@ function animate() {
 							if (o.afx !== r.object3D.fx)
 							{
 								//there was a change 
-								//console.log("disconnect from " , o.afx);
 								o.object3D.audio.gain.disconnect(o.afx); //we have to disconnect first
 								o.afx = r.object3D.fx;
-								//console.log("connect to " , o.afx);
 								o.object3D.audio.gain.connect(o.afx);
 								Log("connect " + o.remote.name + " -> " + r.remote.name + " " + o.afx);
 							}
@@ -907,7 +965,6 @@ function animate() {
 				}
 			}
 
-			
 			if (afx === undefined && o.afx !== undefined)
 			{
 				//Log("afx is " + afx);
@@ -920,7 +977,6 @@ function animate() {
 				{
 					Log(exception, 3);
 				}
-				//o.object3D.audio.gain.connect(o.object3D.audio.listener.getInput());
 				o.afx = undefined; 
 			}
 			
@@ -935,12 +991,11 @@ function animate() {
 				{
 					Log(exception, 3);
 				}
-				//o.object3D.audio.gain.connect(o.object3D.audio.listener.getInput());
 				o.convolver = undefined; 
 			}
-
 			if (afx === undefined && convolver === undefined)
 			{
+				//we reconnect to the listener is no fx or no convolver
 				o.object3D.audio.gain.connect(o.object3D.audio.listener.getInput());
 			}
 		}
@@ -960,6 +1015,7 @@ function animate() {
 		}
 	}
 	*/
+
 	//console.log("end");
 	renderer.render(scene, camera);
 	UpdateLog();
@@ -1178,7 +1234,7 @@ function createObject(o)
 		try
 		{
 			Log("read pd patch...", 0);
-			console.log("read pd patch:", o.pd);
+			//console.log("read pd patch:", o.pd);
 			patch = Pd.loadPatch(o.pd);
 			//Pd.start();
 			//console.log("loaded patch:", patch);
@@ -2216,8 +2272,30 @@ objectsRef.on('child_added', function (snapshot) {
 	space_objects[object.id] = newobj;
 	if (object.id === avatarname)
 	{
-		UpdateLocalCamera(newobj); //this avatar, we update camera with the last known position
+		if (spawning_point === "")
+		{
+			console.log("restore avatar position");
+			UpdateLocalCamera(newobj); //this avatar, we update camera with the last known position
+		}
 	}
+	if (spawning_point === object.name)
+	{
+		
+		Log("go to spawning point " + spawning_point, 1);
+		var target = GetObjectByName(spawning_point)
+		if (target !== undefined)
+		{
+
+			UpdateLocalCamera(target);
+			Log("success", 1);
+		}
+		else
+		{
+			Log("failed", 3);
+		}
+		spawning_point = undefined;
+	}
+	
 	if (object.kind === "avatar")
 	{
 		avatars.push(object.name);
@@ -2312,19 +2390,6 @@ function ActionPatch(url)
 	req.send();
 }
 
-/*
-function ActionStream()
-{
-	var obj= getNewObjectCommand("stream");
-	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
-}
-
-function ActionKnot()
-{
-	var obj= getNewObjectCommand("knot");
-	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
-}
-*/
 function ActionObject(kind)
 {
 	var obj= getNewObjectCommand(kind);
@@ -2332,13 +2397,6 @@ function ActionObject(kind)
 	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
 }
 
-/*
-function ActionEau()
-{
-	var obj= getNewObjectCommand("eau");
-	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
-}
-*/
 
 function ActionSound(url)
 {
@@ -2373,8 +2431,8 @@ function DeleteCurrentSelection()
 	selection = undefined;
 	object_selection = undefined;
 	ObjectDrag = false;
-
 }
+
 
 function ScriptCurrentSelection()
 {
@@ -2385,28 +2443,14 @@ function ScriptCurrentSelection()
 	}
 	else
 		Log("script object " + selection.remote.name + "(" + selection.remote.kind + ")", 2);
-	//firebase.database().ref('spaces/test/objects/' + selection.remote.id).remove();
-	//selection = undefined;
-	//object_selection = undefined;
-	//ObjectDrag = false;
-	
 	selection.remote.script = editor.getValue();
-	//'target.object3D.rotateY(0.1);';
-
 	var target = selection;
-
 	var script = {};
 	script.target = target;
-	//eval(selection.remote.script); //using eval
-
 	var result = function(str){
 		return eval(str);
 	  }.call(script,selection.remote.script);
 	selection.script = script;
-				
-	//eval(selection.remote.script); //test
-	
-
 }
 
 function PlayCurrentSelection()
@@ -2901,8 +2945,9 @@ function listInputsAndOutputs( midiAccess )
   switch (event.data[0] & 0xf0) {
     case 0x90:
 	  if (event.data[2]!=0) 
-	  {  // if velocity != 0, this is a note-on message
-		//MidiNoteOn(event.data[1]);
+	  {  
+		  // if velocity != 0, this is a note-on message
+		
 		var channel = event.data[0]-144;
 		Log("NoteOn " + channel + " " + event.data[1] + " " + event.data[2], 1);
 		if (selection !== undefined && selection.script !== undefined)
@@ -2922,7 +2967,6 @@ function listInputsAndOutputs( midiAccess )
       // if velocity == 0, fall thru: it's a note-off.  MIDI's weird, y'all.
     case 0x80:
 		var channel = event.data[0]-128;
-	  //MidiNoteOff(event.data[1]);
 	  Log("NoteOff " + channel + " " + event.data[1] + " " + event.data[2], 2);
 	  if (selection !== undefined && selection.script !== undefined)
 		{
@@ -2964,30 +3008,7 @@ function listInputsAndOutputs( midiAccess )
   }
 
 
-  function MidiNoteOn(noteNumber) 
-  {
-	/*activeNotes.push( noteNumber );
-	oscillator.frequency.cancelScheduledValues(0);
-	oscillator.frequency.setTargetAtTime( frequencyFromNoteNumber(noteNumber), 0, portamento );
-	envelope.gain.cancelScheduledValues(0);
-	envelope.gain.setTargetAtTime(1.0, 0, attack);
-	*/
-  }
   
-  function MidiNoteOff(noteNumber) {
-	/*var position = activeNotes.indexOf(noteNumber);
-	if (position!=-1) {
-	  activeNotes.splice(position,1);
-	}
-	if (activeNotes.length==0) {  // shut off the envelope
-	  envelope.gain.cancelScheduledValues(0);
-	  envelope.gain.setTargetAtTime(0.0, 0, release );
-	} else {
-	  oscillator.frequency.cancelScheduledValues(0);
-	  oscillator.frequency.setTargetAtTime( frequencyFromNoteNumber(activeNotes[activeNotes.length-1]), 0, portamento );
-	}
-	*/
-  }
   
   function startLoggingMIDIInput( midiAccess, indexOfPort ) {
 	midiAccess.inputs.forEach( function(entry) 
@@ -3052,4 +3073,38 @@ function DeleteObject(object3D)
 		object3D.audio.panner = null;
 	}
 }
+
+
+function GetObjectByName(name)
+{
+	for (var j in space_objects)
+	{
+		var target = space_objects[j];
+		if (target.remote.name === name)
+		{
+			return target;
+		}
+	}
+	return undefined;
+}
+
+
+THREE.DefaultLoadingManager.onLoad = function ( ) {
+
+	//console.log( 'Loading Complete!');
+
+};
+
+
+THREE.DefaultLoadingManager.onProgress = function ( url, itemsLoaded, itemsTotal ) {
+
+	//console.log( 'Loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.' );
+
+};
+
+THREE.DefaultLoadingManager.onError = function ( url ) {
+
+	//console.log( 'There was an error loading ' + url );
+
+};
 
