@@ -845,7 +845,7 @@ function animate() {
 	if (spawning_point === undefined || spawning_point === "" || spawning_point === null)
 	{
 		var loading_threshold2 = loading_threshold*loading_threshold;
-		var loading_hysteresis2 = (loading_threshold*2)*(loading_threshold*2);
+		var loading_hysteresis2 = (loading_threshold*1.1)*(loading_threshold*1.1);
 		for (var j in space_objects)
 		{
 			var target = space_objects[j];
