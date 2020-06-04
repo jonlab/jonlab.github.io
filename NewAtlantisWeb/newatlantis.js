@@ -6,7 +6,6 @@ import { CannonPhysics } from './examples/jsm/physics/CannonPhysics.js';
 import { TransformControls } from './examples/jsm/controls/TransformControls.js';
 
 
-
 const PhysicsEnabled = false;
 /**
  * NEW ATLANTIS WEB POC
@@ -26,6 +25,8 @@ var log_dirty = false;
 
 var minimap_dirty = false;
 var network_activity = 0;
+var network_bytes = 0;
+
 var frame = 0;
 var midi = null;  // global MIDIAccess object
 
@@ -517,6 +518,21 @@ cursor.position.y = 0;
 cursor.position.z = -spawn_distance;
 camera.add(cursor);	
 
+//============================
+//test rot
+/*
+var geometryPano = new THREE.SphereBufferGeometry(1, 16, 8);
+var materialPano = new THREE.MeshStandardMaterial({ color: 0xffffff });
+var pano = new THREE.Mesh(geometryPano, materialPano);
+pano.position.x = 0;
+pano.position.y = 10;
+pano.position.z = 0;
+rot(pano, -128.2, 18.32, -306.47);
+scene.add(pano);
+control.attach( pano);
+*/
+//============================
+
 
 //var light = new THREE.PointLight(0xffffff, 1, 100);
 var light = new THREE.DirectionalLight( 0xffffff, 1 );
@@ -667,10 +683,17 @@ function AddGroundPlane(x,y,z,sizex, sizez)
 }
 
 
-
+var profiler0 = 0;
+var profiler1 = 0;
+var profiler2 = 0;
+var profiler3 = 0;
+var profiler4 = 0;
+var profiler5 = 0;
+var profiler6 = 0;
 
 
 function animate() {
+	ProfilerStart();
 	requestAnimationFrame(animate);
 	frame++;
 	if (frame%2!==0) //cap to 30 FPS
@@ -756,7 +779,8 @@ function animate() {
 	}
 	
 
-	
+	profiler0 = ProfilerStop();
+	ProfilerStart();
 	
 	main_timer += dt;
 	if (parameters.timeEnabled)
@@ -768,7 +792,9 @@ function animate() {
 		water.material.uniforms[ 'time' ].value += dt;
 	}
 
-	
+	profiler1 = ProfilerStop();
+	ProfilerStart();
+
 	if (MovingForward === true) {
 		moveCameraForward(avatar_speed*dt);
 		avatar_dirty = true;
@@ -811,12 +837,12 @@ function animate() {
 	{
 		
 
-		send_timer += 1/60;
+		send_timer += 1/30;
 		if (send_timer > send_interval)
 		{
 			avatar_dirty = false;
 			send_timer -= send_interval;
-
+			//console.log("send_timer " + send_timer);
 			var obj = {};
 			obj.id = avatarname;
 			obj.kind = "avatar";
@@ -839,7 +865,8 @@ function animate() {
 		}
 	}
 	
-
+	profiler1 = ProfilerStop();
+	ProfilerStart();
 	//Log(spawning_point);
 	//streaming
 	if (spawning_point === undefined || spawning_point === "" || spawning_point === null)
@@ -879,6 +906,8 @@ function animate() {
 			}
 		}
 	}	
+	profiler2 = ProfilerStop();
+	ProfilerStart();
 	//execute scripts on objects
 	for (var j in space_objects)
 	{
@@ -900,7 +929,8 @@ function animate() {
 			}
 		}
 	}
-
+	profiler3 = ProfilerStop();
+	ProfilerStart();
 	//console.log("start");
 	//compute all boxes
 	for (var j in space_objects)
@@ -1015,18 +1045,26 @@ function animate() {
 		}
 	}
 	*/
-
+	profiler4 = ProfilerStop();
+	ProfilerStart();
 	//console.log("end");
 	renderer.render(scene, camera);
+	profiler5 = ProfilerStop();
+	ProfilerStart();
 	UpdateLog();
 	if (avatar_dirty)
 	{
 		minimap_dirty = true;
-		network_activity++;
+		//network_activity++;
 		avatar_dirty = false;
 	}
 	UpdateMinimap();
 	stats.end();
+	profiler6 = ProfilerStop();
+
+	//Log(""+profiler0+ " " + profiler1 + " " + profiler2 + " " + profiler3 + " " + profiler4 + " " + profiler5 + " " + profiler6);
+	
+	
 }
 
 animate();
@@ -2272,7 +2310,7 @@ objectsRef.on('child_added', function (snapshot) {
 	space_objects[object.id] = newobj;
 	if (object.id === avatarname)
 	{
-		if (spawning_point === "")
+		if (spawning_point === "" || spawning_point === null || spawning_point === undefined)
 		{
 			console.log("restore avatar position");
 			UpdateLocalCamera(newobj); //this avatar, we update camera with the last known position
@@ -2858,6 +2896,7 @@ function UpdateMinimap()
 		for (var j in space_objects)
 		{
 			var target = space_objects[j];
+
 			var category = 0;
 			if (target.remote.kind === "avatar")
 			{
@@ -2871,12 +2910,14 @@ function UpdateMinimap()
 			{
 				category = 1;
 			}
+			if (!target.active)
+			category = 9; //inactive
 			PlotOnMinimap(target.remote, category);
 		}
 		//Log(network_activity);
 		//PlotOnMinimap(camera.position, 3);
 
-		PlotOnMinimap(camera.position, network_activity%9);
+		PlotOnMinimap(camera.position, 3);
 		/*
 		var pos={};
 		pos.x = 0;
@@ -2885,8 +2926,9 @@ function UpdateMinimap()
 
 		PlotOnMinimap(pos, network_activity%4);
 		*/
-		
-		
+
+		ctx_minimap.fillStyle = '#FFF';
+		ctx_minimap.fillText("mess:"+network_activity + " d:" + network_bytes+" o:" + objects.length, 0, 200 );
 	}
 }
 
@@ -2911,6 +2953,8 @@ function PlotOnMinimap(worldposition, category)
 		ctx_minimap.fillStyle = '#7F7';
 	else if (category === 8)
 		ctx_minimap.fillStyle = '#F7F';
+	else if (category === 9)
+		ctx_minimap.fillStyle = '#777';
 	//1pixel-100m scale
 	var nx = Math.floor(100+(-worldposition.x)/50+0.5);
 	var ny = Math.floor(100+(-worldposition.z)/50+0.5);
@@ -3099,6 +3143,7 @@ THREE.DefaultLoadingManager.onLoad = function ( ) {
 THREE.DefaultLoadingManager.onProgress = function ( url, itemsLoaded, itemsTotal ) {
 
 	//console.log( 'Loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.' );
+	network_bytes += itemsLoaded;
 
 };
 
@@ -3108,3 +3153,52 @@ THREE.DefaultLoadingManager.onError = function ( url ) {
 
 };
 
+
+
+function rot(mesh, tilt_yaw, pitch, yaw)
+{
+	var deg2rad = Math.PI/180;
+
+	//Quaternion q1 = Quaternion.AngleAxis(tilt_yaw, new Vector3(0,1,0));
+	//Quaternion q = q1; //apply tilt_yaw
+	var q1 = new THREE.Quaternion();
+	var q = new THREE.Quaternion();
+	q1.setFromAxisAngle( new THREE.Vector3( 0, 1, 0 ), tilt_yaw*deg2rad );
+	q = q1.clone();
+
+	//Quaternion q2 = Quaternion.AngleAxis(pitch, new Vector3(0,0,1));
+	//q = q*q2; //apply pitch correction
+	//HERE I am not sure, maybe try several combinations of axis, angle sign...
+	var q2 = new THREE.Quaternion();
+	q2.setFromAxisAngle( new THREE.Vector3( 0, 0, 1 ), pitch*deg2rad );
+	q = q.multiply(q2);
+
+	//Quaternion q3 = Quaternion.Inverse(q1);
+	//q = q*q3; //restore tilt_yaw
+	var q3 = q1.clone();
+	q3 = q3.inverse();
+	q = q.multiply(q3);
+
+	//Quaternion q4 = Quaternion.AngleAxis(yaw, new Vector3(0,1,0));
+	//q = q*q4; //apply yaw
+	var q4 = new THREE.Quaternion();
+	q4.setFromAxisAngle( new THREE.Vector3( 0, 1, 0 ), yaw*deg2rad );
+	q = q.multiply(q4);
+
+
+	//transform.rotation = q; //apply final resulting rotation
+	console.log("q:", q);
+	mesh.setRotationFromQuaternion(q);
+}
+
+var startTime;
+
+function ProfilerStart()
+{
+	startTime = performance.now();
+}
+function ProfilerStop()
+{
+	const duration = performance.now() - startTime;
+	return Math.floor(duration);
+}
