@@ -608,7 +608,10 @@ uniforms[ 'rayleigh' ].value = 2;
 uniforms[ 'luminance' ].value = 1;
 uniforms[ 'mieCoefficient' ].value = 0.005;
 uniforms[ 'mieDirectionalG' ].value = 0.8;
-cubeCamera = new THREE.CubeCamera( 0.1, 1, 512 );
+
+var cubeRenderTarget = new THREE.WebGLCubeRenderTarget( 512, { format: THREE.RGBFormat, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter } );
+cubeCamera = new THREE.CubeCamera( 0.1, 1, cubeRenderTarget );
+//cubeCamera = new THREE.CubeCamera( 0.1, 100, 512 );
 cubeCamera.renderTarget.texture.generateMipmaps = true;
 cubeCamera.renderTarget.texture.minFilter = THREE.LinearMipmapLinearFilter;
 scene.background = cubeCamera.renderTarget;
