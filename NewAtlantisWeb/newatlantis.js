@@ -3232,7 +3232,7 @@ if (mode === 'vr')
 	loading_threshold = 100;
 	document.getElementById('avatarname').value = "vr";
 	scene.remove(camera);
-	const cameraGroup = new Group();
+	const cameraGroup = new THREE.Group();
 	cameraGroup.add(camera);
 	scene.add(cameraGroup);
 	document.body.appendChild( VRButton.createButton( renderer ) );
