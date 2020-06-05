@@ -227,8 +227,8 @@ var Inspector = function()
 				controller_freesound.remove();
 			if (controller_createfreesound !== undefined)
 			controller_createfreesound.remove();
-			controller_freesound = fAudioSources.add(parameters, "freesound", freesound_list);
-			controller_createfreesound = fAudioSources.add(parameters, "createFreesound");
+			controller_freesound = fAudioSourcesFreeSound.add(parameters, "freesound", freesound_list);
+			controller_createfreesound = fAudioSourcesFreeSound.add(parameters, "createFreesound");
 			if (result.results.length > 0)
 				this.freesound = result.results[0].previews['preview-hq-mp3'];
 		}
@@ -2586,7 +2586,7 @@ var fAudioSources;
 var f3D;
 var fBox;
 var fSpace;
-
+var fAudioSourcesFreeSound;
 
 function CreateGUI()
 {
@@ -2608,19 +2608,23 @@ function CreateGUI()
 	fSky.add( parameters, 'azimuth', 0, 1, 0.0001 ).onChange( updateSun ).listen();
 	fSky.add( parameters, 'timeEnabled');
 	
-	fAudioSources.add(parameters, "source", na_library_sound);
-	fAudioSources.add(parameters, "createSource");
-	fAudioSources.add(parameters, "loadAudioFile");
+	var fAudioSourcesFile = fAudioSources.addFolder("Samples");
+	fAudioSourcesFile.add(parameters, "source", na_library_sound);
+	fAudioSourcesFile.add(parameters, "createSource");
+	fAudioSourcesFile.add(parameters, "loadAudioFile");
 
-	fAudioSources.add(parameters, "startRecording");
-	fAudioSources.add(parameters, "stopRecording");
+	var fAudioSourcesRecording = fAudioSources.addFolder("Recording");
+	fAudioSourcesRecording.add(parameters, "startRecording");
+	fAudioSourcesRecording.add(parameters, "stopRecording");
 
-	fAudioSources.add(parameters, "patch", na_library_patches);
-	fAudioSources.add(parameters, "createPatch");
-	fAudioSources.add(parameters, "loadPatch");
+	var fAudioSourcesPd = fAudioSources.addFolder("PureData");
+	fAudioSourcesPd.add(parameters, "patch", na_library_patches);
+	fAudioSourcesPd.add(parameters, "createPatch");
+	fAudioSourcesPd.add(parameters, "loadPatch");
 
-	fAudioSources.add(parameters, "search");
-	fAudioSources.add(parameters, "searchFreesound");
+	fAudioSourcesFreeSound = fAudioSources.addFolder("FreeSound");
+	fAudioSourcesFreeSound.add(parameters, "search");
+	fAudioSourcesFreeSound.add(parameters, "searchFreesound");
 	
 	
 	
