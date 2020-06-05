@@ -4,7 +4,8 @@ import { Sky } from './examples/jsm/objects/Sky.js';
 import Stats from './examples/jsm/libs/stats.module.js';
 import { CannonPhysics } from './examples/jsm/physics/CannonPhysics.js';
 import { TransformControls } from './examples/jsm/controls/TransformControls.js';
-
+import { VRButton } from './examples/jsm/webxr/VRButton.js';
+import { XRControllerModelFactory } from './examples/jsm/webxr/XRControllerModelFactory.js';
 
 const PhysicsEnabled = false;
 /**
@@ -88,6 +89,9 @@ var loading_threshold = 500;
 
 var spawning_point="";
 
+//VR
+var controller1, controller2;
+var controllerGrip1, controllerGrip2;
 
 
 
@@ -154,7 +158,8 @@ var Inspector = function()
 	this.createObject = function()
 	{
 		var kind = this.object;
-		ActionObject(kind);
+		var name = this.name;
+		ActionObject(kind, name);
 	};
 
 	this.createResonator = function()
@@ -422,6 +427,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 document.body.appendChild(renderer.domElement);
 renderer.domElement.ondrop = OnDrop;
 renderer.domElement.ondragover = OnDragOver;
+renderer.xr.enabled = true;
 
 control = new TransformControls( camera, renderer.domElement );
 control.space = "local";
@@ -694,7 +700,7 @@ var profiler6 = 0;
 
 function animate() {
 	ProfilerStart();
-	requestAnimationFrame(animate);
+	//requestAnimationFrame(animate);
 	frame++;
 	if (frame%2!==0) //cap to 30 FPS
 	return;
@@ -1067,7 +1073,8 @@ function animate() {
 	
 }
 
-animate();
+//animate();
+renderer.setAnimationLoop(animate);
 
 
 function getNoise(duration)
@@ -2428,10 +2435,14 @@ function ActionPatch(url)
 	req.send();
 }
 
-function ActionObject(kind)
+function ActionObject(kind, name)
 {
+	Log("ActionObject " + name);
 	var obj= getNewObjectCommand(kind);
-	obj.name = kind;
+	if (name !== undefined)
+		obj.name = name;
+	else
+		obj.name = kind;
 	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
 }
 
@@ -2621,6 +2632,7 @@ function CreateGUI()
 	
 	
 	f3D.add(parameters, "object", na_library_objects);
+	f3D.add(parameters, "name");
 	f3D.add(parameters, "createObject");
 	f3D.add(parameters, "loadModelFile");
 
@@ -3039,7 +3051,6 @@ function listInputsAndOutputs( midiAccess )
 			}
 		}
 		break;
-
   }
 
 
@@ -3134,23 +3145,17 @@ function GetObjectByName(name)
 
 
 THREE.DefaultLoadingManager.onLoad = function ( ) {
-
 	//console.log( 'Loading Complete!');
-
 };
 
 
 THREE.DefaultLoadingManager.onProgress = function ( url, itemsLoaded, itemsTotal ) {
-
 	//console.log( 'Loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.' );
 	network_bytes += itemsLoaded;
-
 };
 
 THREE.DefaultLoadingManager.onError = function ( url ) {
-
 	//console.log( 'There was an error loading ' + url );
-
 };
 
 
@@ -3202,3 +3207,195 @@ function ProfilerStop()
 	const duration = performance.now() - startTime;
 	return Math.floor(duration);
 }
+
+
+
+
+
+
+
+
+//VR
+document.body.appendChild( VRButton.createButton( renderer ) );
+// controllers
+
+controller1 = renderer.xr.getController( 0 );
+controller1.addEventListener( 'selectstart', onSelectStart );
+controller1.addEventListener( 'selectend', onSelectEnd );
+scene.add( controller1 );
+
+controller2 = renderer.xr.getController( 1 );
+controller2.addEventListener( 'selectstart', onSelectStart );
+controller2.addEventListener( 'selectend', onSelectEnd );
+scene.add( controller2 );
+
+
+controller1.addEventListener( 'connected', function ( event ) {
+
+	this.add( buildController( event.data ) );
+
+} );
+controller1.addEventListener( 'disconnected', function () {
+
+	this.remove( this.children[ 0 ] );
+
+} );
+
+controller2.addEventListener( 'connected', function ( event ) {
+
+	this.add( buildController( event.data ) );
+
+} );
+controller2.addEventListener( 'disconnected', function () {
+
+	this.remove( this.children[ 0 ] );
+
+} );
+
+
+
+
+
+var controllerModelFactory = new XRControllerModelFactory();
+
+controllerGrip1 = renderer.xr.getControllerGrip( 0 );
+controllerGrip1.add( controllerModelFactory.createControllerModel( controllerGrip1 ) );
+scene.add( controllerGrip1 );
+
+controllerGrip2 = renderer.xr.getControllerGrip( 1 );
+controllerGrip2.add( controllerModelFactory.createControllerModel( controllerGrip2 ) );
+scene.add( controllerGrip2 );
+
+//
+
+var geometry = new THREE.BufferGeometry().setFromPoints( [ new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 0, - 1 ) ] );
+
+var line = new THREE.Line( geometry );
+line.name = 'line';
+line.scale.z = 5;
+
+controller1.add( line.clone() );
+controller2.add( line.clone() );
+
+//raycaster = new THREE.Raycaster();
+
+StartDSP();
+
+function onSelectStart( event ) {
+
+	var controller = event.target;
+
+	var intersections = getIntersections( controller );
+
+	if ( intersections.length > 0 ) {
+
+		var intersection = intersections[ 0 ];
+
+		var object = intersection.object;
+		object.material.emissive.b = 1;
+		controller.attach( object );
+
+		controller.userData.selected = object;
+
+	}
+
+}
+
+function onSelectEnd( event ) {
+
+	var controller = event.target;
+
+	if ( controller.userData.selected !== undefined ) {
+
+		var object = controller.userData.selected;
+		object.material.emissive.b = 0;
+		group.attach( object );
+
+		controller.userData.selected = undefined;
+
+	}
+
+
+}
+
+function getIntersections( controller ) {
+
+	tempMatrix.identity().extractRotation( controller.matrixWorld );
+
+	raycaster.ray.origin.setFromMatrixPosition( controller.matrixWorld );
+	raycaster.ray.direction.set( 0, 0, - 1 ).applyMatrix4( tempMatrix );
+
+	return raycaster.intersectObjects( group.children );
+
+}
+
+function intersectObjects( controller ) {
+
+	// Do not highlight when already selected
+
+	if ( controller.userData.selected !== undefined ) return;
+
+	var line = controller.getObjectByName( 'line' );
+	var intersections = getIntersections( controller );
+
+	if ( intersections.length > 0 ) {
+
+		var intersection = intersections[ 0 ];
+
+		var object = intersection.object;
+		object.material.emissive.r = 1;
+		intersected.push( object );
+
+		line.scale.z = intersection.distance;
+
+	} else {
+
+		line.scale.z = 5;
+
+	}
+
+}
+
+function cleanIntersected() {
+
+	while ( intersected.length ) {
+
+		var object = intersected.pop();
+		object.material.emissive.r = 0;
+
+	}
+
+}
+function buildController( data ) {
+
+	switch ( data.targetRayMode ) {
+
+		case 'tracked-pointer':
+
+			var geometry = new THREE.BufferGeometry();
+			geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( [ 0, 0, 0, 0, 0, - 1 ], 3 ) );
+			geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( [ 0.5, 0.5, 0.5, 0, 0, 0 ], 3 ) );
+
+			var material = new THREE.LineBasicMaterial( { vertexColors: true, blending: THREE.AdditiveBlending } );
+
+			return new THREE.Line( geometry, material );
+
+		case 'gaze':
+
+			var geometry = new THREE.RingBufferGeometry( 0.02, 0.04, 32 ).translate( 0, 0, - 1 );
+			var material = new THREE.MeshBasicMaterial( { opacity: 0.5, transparent: true } );
+			return new THREE.Mesh( geometry, material );
+
+	}
+
+}
+
+
+//loop
+/*
+cleanIntersected();
+
+				intersectObjects( controller1 );
+				intersectObjects( controller2 );
+				renderer.render( scene, camera );
+				*/

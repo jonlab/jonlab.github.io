@@ -46,7 +46,8 @@ var na_library_objects = {
 	cylinder:'cylinder',
 	cone:'cone',
 	island:'island',
-	light: 'light'
+	light: 'light',
+	POI:"poi"
 };
 
 /*
