@@ -90,8 +90,24 @@ var loading_threshold = 500;
 var spawning_point="";
 
 //VR
+var mode = "";
 var controller1, controller2;
 var controllerGrip1, controllerGrip2;
+
+
+
+//URL parameters parsing
+const queryString = window.location.search;
+console.log(queryString);
+const urlParams = new URLSearchParams(queryString);
+if (urlParams !== undefined)
+{
+	spawning_point = urlParams.get('spawn')
+	console.log("spawning_point=" + spawning_point);
+	mode = urlParams.get('mode')
+}
+
+
 
 
 
@@ -613,15 +629,7 @@ listener = new THREE.AudioListener();
 camera.add(listener);
 audioContext = listener.context;
 
-//URL parameters
-const queryString = window.location.search;
-console.log(queryString);
-const urlParams = new URLSearchParams(queryString);
-if (urlParams !== undefined)
-{
-	spawning_point = urlParams.get('spawn')
-	console.log("spawning_point=" + spawning_point);
-}
+
 
 
 
@@ -3212,190 +3220,192 @@ function ProfilerStop()
 
 
 
+if (mode === 'vr')
+{
+	loading_threshold = 100;
+	document.getElementById('avatarname').value = "vr";
+	//VR
+	document.body.appendChild( VRButton.createButton( renderer ) );
+	// controllers
+
+	controller1 = renderer.xr.getController( 0 );
+	controller1.addEventListener( 'selectstart', onSelectStart );
+	controller1.addEventListener( 'selectend', onSelectEnd );
+	scene.add( controller1 );
+
+	controller2 = renderer.xr.getController( 1 );
+	controller2.addEventListener( 'selectstart', onSelectStart );
+	controller2.addEventListener( 'selectend', onSelectEnd );
+	scene.add( controller2 );
+
+
+	controller1.addEventListener( 'connected', function ( event ) {
+
+		//this.add( buildController( event.data ) );
+
+	} );
+	controller1.addEventListener( 'disconnected', function () {
+
+		//this.remove( this.children[ 0 ] );
+
+	} );
+
+	controller2.addEventListener( 'connected', function ( event ) {
+
+		//this.add( buildController( event.data ) );
+
+	} );
+	controller2.addEventListener( 'disconnected', function () {
+
+		//this.remove( this.children[ 0 ] );
+
+	} );
 
 
 
-//VR
-document.body.appendChild( VRButton.createButton( renderer ) );
-// controllers
-
-controller1 = renderer.xr.getController( 0 );
-controller1.addEventListener( 'selectstart', onSelectStart );
-controller1.addEventListener( 'selectend', onSelectEnd );
-scene.add( controller1 );
-
-controller2 = renderer.xr.getController( 1 );
-controller2.addEventListener( 'selectstart', onSelectStart );
-controller2.addEventListener( 'selectend', onSelectEnd );
-scene.add( controller2 );
 
 
-controller1.addEventListener( 'connected', function ( event ) {
+	var controllerModelFactory = new XRControllerModelFactory();
 
-	//this.add( buildController( event.data ) );
+	controllerGrip1 = renderer.xr.getControllerGrip( 0 );
+	controllerGrip1.add( controllerModelFactory.createControllerModel( controllerGrip1 ) );
+	scene.add( controllerGrip1 );
 
-} );
-controller1.addEventListener( 'disconnected', function () {
+	controllerGrip2 = renderer.xr.getControllerGrip( 1 );
+	controllerGrip2.add( controllerModelFactory.createControllerModel( controllerGrip2 ) );
+	scene.add( controllerGrip2 );
 
-	//this.remove( this.children[ 0 ] );
+	//
 
-} );
+	var geometry = new THREE.BufferGeometry().setFromPoints( [ new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 0, - 1 ) ] );
 
-controller2.addEventListener( 'connected', function ( event ) {
+	var line = new THREE.Line( geometry );
+	line.name = 'line';
+	line.scale.z = 5;
 
-	//this.add( buildController( event.data ) );
+	controller1.add( line.clone() );
+	controller2.add( line.clone() );
 
-} );
-controller2.addEventListener( 'disconnected', function () {
+	//raycaster = new THREE.Raycaster();
 
-	//this.remove( this.children[ 0 ] );
+	StartDSP();
 
-} );
+	function onSelectStart( event ) {
 
+		var controller = event.target;
 
+		var intersections = getIntersections( controller );
 
+		if ( intersections.length > 0 ) {
 
+			var intersection = intersections[ 0 ];
 
-var controllerModelFactory = new XRControllerModelFactory();
+			var object = intersection.object;
+			object.material.emissive.b = 1;
+			controller.attach( object );
 
-controllerGrip1 = renderer.xr.getControllerGrip( 0 );
-controllerGrip1.add( controllerModelFactory.createControllerModel( controllerGrip1 ) );
-scene.add( controllerGrip1 );
+			controller.userData.selected = object;
 
-controllerGrip2 = renderer.xr.getControllerGrip( 1 );
-controllerGrip2.add( controllerModelFactory.createControllerModel( controllerGrip2 ) );
-scene.add( controllerGrip2 );
-
-//
-
-var geometry = new THREE.BufferGeometry().setFromPoints( [ new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 0, - 1 ) ] );
-
-var line = new THREE.Line( geometry );
-line.name = 'line';
-line.scale.z = 5;
-
-controller1.add( line.clone() );
-controller2.add( line.clone() );
-
-//raycaster = new THREE.Raycaster();
-
-StartDSP();
-
-function onSelectStart( event ) {
-
-	var controller = event.target;
-
-	var intersections = getIntersections( controller );
-
-	if ( intersections.length > 0 ) {
-
-		var intersection = intersections[ 0 ];
-
-		var object = intersection.object;
-		object.material.emissive.b = 1;
-		controller.attach( object );
-
-		controller.userData.selected = object;
-
-	}
-
-}
-
-function onSelectEnd( event ) {
-
-	var controller = event.target;
-
-	if ( controller.userData.selected !== undefined ) {
-
-		var object = controller.userData.selected;
-		object.material.emissive.b = 0;
-		group.attach( object );
-
-		controller.userData.selected = undefined;
+		}
 
 	}
 
+	function onSelectEnd( event ) {
 
-}
+		var controller = event.target;
 
-function getIntersections( controller ) {
+		if ( controller.userData.selected !== undefined ) {
 
-	tempMatrix.identity().extractRotation( controller.matrixWorld );
+			var object = controller.userData.selected;
+			object.material.emissive.b = 0;
+			group.attach( object );
 
-	raycaster.ray.origin.setFromMatrixPosition( controller.matrixWorld );
-	raycaster.ray.direction.set( 0, 0, - 1 ).applyMatrix4( tempMatrix );
+			controller.userData.selected = undefined;
 
-	return raycaster.intersectObjects( group.children );
+		}
 
-}
-
-function intersectObjects( controller ) {
-
-	// Do not highlight when already selected
-
-	if ( controller.userData.selected !== undefined ) return;
-
-	var line = controller.getObjectByName( 'line' );
-	var intersections = getIntersections( controller );
-
-	if ( intersections.length > 0 ) {
-
-		var intersection = intersections[ 0 ];
-
-		var object = intersection.object;
-		object.material.emissive.r = 1;
-		intersected.push( object );
-
-		line.scale.z = intersection.distance;
-
-	} else {
-
-		line.scale.z = 5;
 
 	}
 
-}
+	function getIntersections( controller ) {
 
-function cleanIntersected() {
+		tempMatrix.identity().extractRotation( controller.matrixWorld );
 
-	while ( intersected.length ) {
+		raycaster.ray.origin.setFromMatrixPosition( controller.matrixWorld );
+		raycaster.ray.direction.set( 0, 0, - 1 ).applyMatrix4( tempMatrix );
 
-		var object = intersected.pop();
-		object.material.emissive.r = 0;
-
-	}
-
-}
-function buildController( data ) {
-
-	switch ( data.targetRayMode ) {
-
-		case 'tracked-pointer':
-
-			var geometry = new THREE.BufferGeometry();
-			geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( [ 0, 0, 0, 0, 0, - 1 ], 3 ) );
-			geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( [ 0.5, 0.5, 0.5, 0, 0, 0 ], 3 ) );
-
-			var material = new THREE.LineBasicMaterial( { vertexColors: true, blending: THREE.AdditiveBlending } );
-
-			return new THREE.Line( geometry, material );
-
-		case 'gaze':
-
-			var geometry = new THREE.RingBufferGeometry( 0.02, 0.04, 32 ).translate( 0, 0, - 1 );
-			var material = new THREE.MeshBasicMaterial( { opacity: 0.5, transparent: true } );
-			return new THREE.Mesh( geometry, material );
+		return raycaster.intersectObjects( group.children );
 
 	}
 
+	function intersectObjects( controller ) {
+
+		// Do not highlight when already selected
+
+		if ( controller.userData.selected !== undefined ) return;
+
+		var line = controller.getObjectByName( 'line' );
+		var intersections = getIntersections( controller );
+
+		if ( intersections.length > 0 ) {
+
+			var intersection = intersections[ 0 ];
+
+			var object = intersection.object;
+			object.material.emissive.r = 1;
+			intersected.push( object );
+
+			line.scale.z = intersection.distance;
+
+		} else {
+
+			line.scale.z = 5;
+
+		}
+
+	}
+
+	function cleanIntersected() {
+
+		while ( intersected.length ) {
+
+			var object = intersected.pop();
+			object.material.emissive.r = 0;
+
+		}
+
+	}
+	function buildController( data ) {
+
+		switch ( data.targetRayMode ) {
+
+			case 'tracked-pointer':
+
+				var geometry = new THREE.BufferGeometry();
+				geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( [ 0, 0, 0, 0, 0, - 1 ], 3 ) );
+				geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( [ 0.5, 0.5, 0.5, 0, 0, 0 ], 3 ) );
+
+				var material = new THREE.LineBasicMaterial( { vertexColors: true, blending: THREE.AdditiveBlending } );
+
+				return new THREE.Line( geometry, material );
+
+			case 'gaze':
+
+				var geometry = new THREE.RingBufferGeometry( 0.02, 0.04, 32 ).translate( 0, 0, - 1 );
+				var material = new THREE.MeshBasicMaterial( { opacity: 0.5, transparent: true } );
+				return new THREE.Mesh( geometry, material );
+
+		}
+
+	}
+
+
+	//loop
+	/*
+	cleanIntersected();
+
+					intersectObjects( controller1 );
+					intersectObjects( controller2 );
+					renderer.render( scene, camera );
+					*/
 }
-
-
-//loop
-/*
-cleanIntersected();
-
-				intersectObjects( controller1 );
-				intersectObjects( controller2 );
-				renderer.render( scene, camera );
-				*/
