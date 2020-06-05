@@ -3218,18 +3218,23 @@ function ProfilerStop()
 }
 
 
-
+//const p = camera.getWorldPosition();
+//console.log(p);
 
 
 if (mode === 'vr')
 {
+	//VR
 	parameters.timeEnabled = false;
 	water.visible = false;
 	sky.visible = false;
 	scene.background = new THREE.Color(0xAAAAAA);;
 	loading_threshold = 100;
 	document.getElementById('avatarname').value = "vr";
-	//VR
+	scene.remove(camera);
+	const cameraGroup = new Group();
+	cameraGroup.add(camera);
+	scene.add(cameraGroup);
 	document.body.appendChild( VRButton.createButton( renderer ) );
 	// controllers
 
@@ -3299,6 +3304,14 @@ if (mode === 'vr')
 
 		Log("onSelectStart");
 		var controller = event.target;
+		const p = controller.getWorldPosition();
+		// Set Vector V to the direction of the controller, at 1m/s
+		const v = controller.getWorldDirection();
+		// Scale the initial velocity to 6m/s
+		//v.multiplyScalar(10);
+		//const feetPos = renderer.xr.getCamera(camera).getWorldPosition();
+		cameraGroup.position.addScaledVector(v,10);
+		
 
 		var intersections = getIntersections( controller );
 
