@@ -3279,11 +3279,11 @@ if (mode === 'vr')
 
 	controllerGrip1 = renderer.xr.getControllerGrip( 0 );
 	controllerGrip1.add( controllerModelFactory.createControllerModel( controllerGrip1 ) );
-	scene.add( controllerGrip1 );
+	cameraGroup.add( controllerGrip1 );
 
 	controllerGrip2 = renderer.xr.getControllerGrip( 1 );
 	controllerGrip2.add( controllerModelFactory.createControllerModel( controllerGrip2 ) );
-	scene.add( controllerGrip2 );
+	cameraGroup.add( controllerGrip2 );
 
 	//
 
