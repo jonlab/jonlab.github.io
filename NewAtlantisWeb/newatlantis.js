@@ -3243,9 +3243,19 @@ if (mode === 'vr')
 	scene.remove(camera);
 	const cameraGroup = new THREE.Group();
 	cameraGroup.add(camera);
+
 	//in VR camera is handled by system
 	//camera.position.set(0,1000,0);
 	scene.add(cameraGroup);
+
+	var materialSimpleSea = new THREE.MeshStandardMaterial({transparent:true,opacity:0.5, roughness:0.0});
+	var geometrySimpleSea = new THREE.PlaneBufferGeometry(10000, 10000, 10, 10);
+	var planeSimpleSea = new THREE.Mesh(geometrySimpleSea, materialSimpleSea);
+	planeSimpleSea.rotation.setFromVector3(new THREE.Vector3(-Math.PI / 2, 0, 0));
+	scene.add(planeSimpleSea);
+
+
+
 	document.body.appendChild( VRButton.createButton( renderer ) );
 	// controllers
 
