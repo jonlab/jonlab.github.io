@@ -574,7 +574,6 @@ var axesHelper = new THREE.AxesHelper(1);
 scene.add(axesHelper);
 
 
-
 // Water
 var waterGeometry = new THREE.PlaneBufferGeometry( 10000, 10000 );
 water = new Water(
@@ -3231,10 +3230,10 @@ function ProfilerStop()
 if (mode === 'vr')
 {
 	//VR
-	parameters.timeEnabled = false;
+	//parameters.timeEnabled = false;
 	water.visible = false;
-	sky.visible = false;
-	light.position.set(10,30, 0);
+	//sky.visible = false;
+	//light.position.set(10,30, 0);
 	scene.background = new THREE.Color(0xAAAAAA);;
 	loading_threshold = 400;
 	document.getElementById('avatarname').value = "vr";
