@@ -53,6 +53,7 @@ var objects = []; //THREE objects
 var objects_main = [];
 var avatars = []; //all avatars
 var water;
+var sky;
 var cubeCamera;
 
 var selection; //current target
@@ -601,7 +602,7 @@ if (PhysicsEnabled)
 	physics.addMesh( water);
 
 // Skybox
-var sky = new Sky();
+sky = new Sky();
 var uniforms = sky.material.uniforms;
 uniforms[ 'turbidity' ].value = 10;
 uniforms[ 'rayleigh' ].value = 2;
@@ -709,9 +710,9 @@ var profiler6 = 0;
 function animate() {
 	ProfilerStart();
 	//requestAnimationFrame(animate);
-	frame++;
-	if (frame%2!==0) //cap to 30 FPS
-	return;
+	//frame++;
+	//if (frame%2!==0) //cap to 30 FPS
+	//return;
 
 	stats.begin();
 	var deadzone = 0.1;
@@ -3222,6 +3223,10 @@ function ProfilerStop()
 
 if (mode === 'vr')
 {
+	parameters.timeEnabled = false;
+	water.visible = false;
+	sky.visible = false;
+	scene.background = new THREE.Color(0xAAAAAA);;
 	loading_threshold = 100;
 	document.getElementById('avatarname').value = "vr";
 	//VR
