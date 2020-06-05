@@ -3234,8 +3234,8 @@ if (mode === 'vr')
 	water.visible = false;
 	//sky.visible = false;
 	//light.position.set(10,30, 0);
-	scene.background = new THREE.Color(0xAAAAAA);;
-	loading_threshold = 400;
+	//scene.background = new THREE.Color(0xAAAAAA);;
+	loading_threshold = 200;
 	document.getElementById('avatarname').value = "vr";
 	scene.remove(camera);
 	const cameraGroup = new THREE.Group();
