@@ -3232,23 +3232,23 @@ scene.add( controller2 );
 
 controller1.addEventListener( 'connected', function ( event ) {
 
-	this.add( buildController( event.data ) );
+	//this.add( buildController( event.data ) );
 
 } );
 controller1.addEventListener( 'disconnected', function () {
 
-	this.remove( this.children[ 0 ] );
+	//this.remove( this.children[ 0 ] );
 
 } );
 
 controller2.addEventListener( 'connected', function ( event ) {
 
-	this.add( buildController( event.data ) );
+	//this.add( buildController( event.data ) );
 
 } );
 controller2.addEventListener( 'disconnected', function () {
 
-	this.remove( this.children[ 0 ] );
+	//this.remove( this.children[ 0 ] );
 
 } );
 
