@@ -562,7 +562,7 @@ var light = new THREE.DirectionalLight( 0xffffff, 1 );
 //var light = new THREE.DirectionalLight( 0xffffff, 1.0 );
 //light = new THREE.SpotLight( 0xffffff, 1, 0, Math.PI / 5, 0.3 );
 light.position.set(10,30, 0);
-light.castShadow = true;
+light.castShadow = false;
 light.shadow.camera.near = 0.1;
 light.shadow.camera.far = 1000;
 light.shadow.bias = 0.0001;
@@ -884,6 +884,8 @@ function animate() {
 	ProfilerStart();
 	//Log(spawning_point);
 	//streaming
+	var refposition = new THREE.Vector3();
+	var refposition = camera.getWorldPosition(refposition);
 	if (spawning_point === undefined || spawning_point === "" || spawning_point === null)
 	{
 		var loading_threshold2 = loading_threshold*loading_threshold;
@@ -891,7 +893,7 @@ function animate() {
 		for (var j in space_objects)
 		{
 			var target = space_objects[j];
-			var dist2 = GetDistance2(target.remote, camera.position);
+			var dist2 = GetDistance2(target.remote, refposition);
 			if (dist2 < loading_threshold2 && !target.active)
 			{
 				target.active = true;
@@ -3232,6 +3234,7 @@ if (mode === 'vr')
 	parameters.timeEnabled = false;
 	water.visible = false;
 	sky.visible = false;
+	light.position.set(10,30, 0);
 	scene.background = new THREE.Color(0xAAAAAA);;
 	loading_threshold = 400;
 	document.getElementById('avatarname').value = "vr";
