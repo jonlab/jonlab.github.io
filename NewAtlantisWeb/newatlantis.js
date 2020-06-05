@@ -3241,12 +3241,12 @@ if (mode === 'vr')
 	controller1 = renderer.xr.getController( 0 );
 	controller1.addEventListener( 'selectstart', onSelectStart );
 	controller1.addEventListener( 'selectend', onSelectEnd );
-	scene.add( controller1 );
+	cameraGroup.add( controller1 );
 
 	controller2 = renderer.xr.getController( 1 );
 	controller2.addEventListener( 'selectstart', onSelectStart );
 	controller2.addEventListener( 'selectend', onSelectEnd );
-	scene.add( controller2 );
+	cameraGroup.add( controller2 );
 
 
 	controller1.addEventListener( 'connected', function ( event ) {
