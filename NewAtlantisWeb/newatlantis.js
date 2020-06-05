@@ -3233,7 +3233,7 @@ if (mode === 'vr')
 	water.visible = false;
 	sky.visible = false;
 	scene.background = new THREE.Color(0xAAAAAA);;
-	loading_threshold = 100;
+	loading_threshold = 400;
 	document.getElementById('avatarname').value = "vr";
 	scene.remove(camera);
 	const cameraGroup = new THREE.Group();
@@ -3307,16 +3307,25 @@ if (mode === 'vr')
 	function onSelectStart( event ) {
 
 		Log("onSelectStart");
+		var temppos = new THREE.Vector3();
+		const feetPos = renderer.xr.getCamera(camera).getWorldPosition(temppos);
+		console.log("feetPos:", feetPos);
+
 		var controller = event.target;
-		const p = controller.getWorldPosition();
+		const p = controller.getWorldPosition(temppos);
+		console.log("controller worldpos:", p);
 		// Set Vector V to the direction of the controller, at 1m/s
-		const v = controller.getWorldDirection();
+		const v = controller.getWorldDirection(temppos);
+
+		console.log("dir:", v);
 		// Scale the initial velocity to 6m/s
 		//v.multiplyScalar(10);
 		//const feetPos = renderer.xr.getCamera(camera).getWorldPosition();
-		cameraGroup.position.addScaledVector(v,10);
-		
+		cameraGroup.position.addScaledVector(v,-10);
 
+		
+		
+		return;
 		var intersections = getIntersections( controller );
 
 		if ( intersections.length > 0 ) {
@@ -3336,6 +3345,7 @@ if (mode === 'vr')
 	function onSelectEnd( event ) {
 
 		Log("onSelectEnd");
+		return;
 		var controller = event.target;
 
 		if ( controller.userData.selected !== undefined ) {
@@ -3397,7 +3407,6 @@ if (mode === 'vr')
 			object.material.emissive.r = 0;
 
 		}
-
 	}
 	function buildController( data ) {
 
