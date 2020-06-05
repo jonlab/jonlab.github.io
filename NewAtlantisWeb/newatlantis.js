@@ -523,10 +523,9 @@ var BallWave = function() {
   
 
 
-
+//face the sun
 camera.position.z = 0;
 camera.position.y = 3;
-
 camera.rotation.y = Math.PI/2;
 
 //cursor
@@ -887,7 +886,8 @@ function animate() {
 	//Log(spawning_point);
 	//streaming
 	var refposition = new THREE.Vector3();
-	var refposition = camera.getWorldPosition(refposition);
+	refposition = camera.getWorldPosition(refposition);
+	//console.log("refposition", refposition);
 	if (spawning_point === undefined || spawning_point === "" || spawning_point === null)
 	{
 		var loading_threshold2 = loading_threshold*loading_threshold;
@@ -1312,7 +1312,7 @@ function createObject(o)
 			console.log("PD patch loading exception:", exception);
 		}
 		sound.setRefDistance( 1 );
-		sound.setRolloffFactor(1.5);
+		sound.setRolloffFactor(1.2);
 		sound.setDistanceModel("exponential");
 		sound.play();
 		cube.add(sound);
@@ -1408,7 +1408,7 @@ function createObject(o)
 			}
 			);
 			sound.setRefDistance(1);
-			sound.setRolloffFactor(1.5);
+			sound.setRolloffFactor(1.2);
 			sound.setMaxDistance(10000);
 			sound.panner.panningModel = 'equalpower';
 			//sound.panner.panningModel = 'HRTF';
@@ -1529,7 +1529,7 @@ function createObject(o)
 			else if (o.fx === "waveshaper")
 				cube.fx = audioContext.createWaveShaper();
 			sound.setRefDistance(1);
-			sound.setRolloffFactor(1.5);
+			sound.setRolloffFactor(1.2);
 			sound.setDistanceModel("exponential");
 			if (cube.fx !== undefined)
 			{
@@ -3243,6 +3243,8 @@ if (mode === 'vr')
 	scene.remove(camera);
 	const cameraGroup = new THREE.Group();
 	cameraGroup.add(camera);
+	//in VR camera is handled by system
+	//camera.position.set(0,1000,0);
 	scene.add(cameraGroup);
 	document.body.appendChild( VRButton.createButton( renderer ) );
 	// controllers
