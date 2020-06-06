@@ -877,6 +877,7 @@ function animate() {
 			obj.scale.x = 1;
 			obj.scale.y = 1;
 			obj.scale.z = 1;
+			obj.texture = avatar_texture_url;
 			firebase.database().ref('spaces/test/objects/' + avatarname).set(obj);
 		}
 	}
@@ -1139,7 +1140,7 @@ function createObject(o)
 	}
 	else if (o.kind === "avatar")
 	{
-		geometry = new THREE.DodecahedronGeometry();
+		geometry = new THREE.SphereBufferGeometry(0.5,16,8);
 	}
 	else if (o.kind === "stream")
 	{
@@ -1180,20 +1181,30 @@ function createObject(o)
 	}
 	
 	var material = null;
-	
-	if (o.kind === "light")
+	var texture = null;
+	if (o.texture !== undefined)
+	{
+		texture = new THREE.TextureLoader().load( o.texture );
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.offset = new THREE.Vector2(-0.25,0);
+	}
+	if (o.kind === "light" || o.kind === "avatar")
 	{	
-		material = new THREE.MeshBasicMaterial();
+		material = new THREE.MeshBasicMaterial({ map: texture });
 	}
 	else if (o.kind === "box" || o.kind === "resonator")
 	{
-		material = new THREE.MeshStandardMaterial({transparent:true,opacity:0.5, roughness:0.0});
+		material = new THREE.MeshStandardMaterial({transparent:true,opacity:0.5, roughness:0.0, map: texture});
 	}
 	else
 	{
-		material = new THREE.MeshStandardMaterial();
+		material = new THREE.MeshStandardMaterial({map: texture});
 	}
 	
+
+	
+
+
 	cube = new THREE.Mesh(geometry, material);
 	cube.position.x = o.x;
 	cube.position.y = o.y;
@@ -1218,7 +1229,7 @@ function createObject(o)
 		cube.scale.z = o.scale.z;
 	}
 	
-	if (o.kind !== "light")
+	if (o.kind !== "light" && o.kind !== "avatar")
 	{
 		material.color.r = o.r;
 		material.color.g = o.g;
@@ -1703,6 +1714,32 @@ function uploadAudioFile(file, worldposition)
 	});
 }
 
+var avatar_texture_url = "";
+
+function uploadAvatarTextureFile(file)
+{
+	var storage = firebase.storage();
+	var storageRef = storage.ref(); // Create a storage reference from our storage service
+	var audioRef = storageRef.child('avatars');
+	var fileRef = audioRef.child(uuidv4());
+	var url = fileRef.fullPath;
+	Log("uploading to " + url, 2);
+	fileRef.put(file).then(function(snapshot) 
+	{
+		console.log('Uploaded a blob or file! ');			
+		fileRef.getDownloadURL().then(function(url) 
+		{
+			//store URL to update next time
+			avatar_texture_url = url;
+			console.log("avatar texture url:", avatar_texture_url);
+
+		}).catch(function(error) {
+			// Handle any errors
+			Log("uploadAvatarTextureFile error", 1);
+		  });
+	});
+}
+
 function moveCameraForward(distance) {
 
 	// move forward parallel to the xz-plane
@@ -1896,12 +1933,107 @@ var gamepad_buttons = [];
 
 var editor;
 
+
+var elInfo = document.getElementById('info');
+var elWebcam = document.getElementById('webcam');
+
+var elVideo = document.createElement('video');
+elVideo.height = 200;
+elWebcam.appendChild(elVideo);
+
+//audio recording
+
+if (navigator.mediaDevices) 
+{
+	console.log('getUserMedia supported.');
+	navigator.mediaDevices.getUserMedia ({audio: true, video: false})
+	.then(function(stream) {
+		
+		// Create a MediaStreamAudioSourceNode
+		// Feed the HTMLMediaElement into it
+		var sourceNode = audioContext.createMediaStreamSource(stream);
+
+		audioRecorder = new WebAudioRecorder(sourceNode, {
+			workerDir: "js/",     // must end with slash
+			encoding: "wav",
+			channels: 1,
+			timeLimit: 10,
+			encodeAfterRecord: true
+			});
+
+		audioRecorder.onComplete = function(recorder, blob) 
+		{ 
+			//recording complete
+			//console.log("blob:", blob);
+			//center
+			mouse.x = 0;
+			mouse.y = 0;
+			raycaster.setFromCamera( mouse, camera );
+			var spawn_position = new THREE.Vector3();
+			spawn_position = raycaster.ray.origin.clone();
+			spawn_position.addScaledVector(raycaster.ray.direction, 5);
+			//we upload the audio content in NA
+			uploadAudioFile(blob, spawn_position);
+		};
+	})
+	.catch(function(err) {
+		console.log('The following gUM error occured: ' + err);
+	});
+
+
+
+	navigator.mediaDevices.getUserMedia ({audio: false, video: true})
+	.then(function(stream) {
+		elVideo.srcObject = stream;
+		elVideo.onloadedmetadata = function(e) {
+			elVideo.play();
+			elVideo.muted = true;
+		};
+
+		
+	})
+	.catch(function(err) {
+		console.log('The following gUM error occured: ' + err);
+	});
+
+
+} else {
+	console.log('getUserMedia not supported on your browser!');
+}
+
+
+
+function capture(video, scaleFactor) {
+    if(scaleFactor == null){
+        scaleFactor = 1;
+    }
+    var w = video.videoWidth * scaleFactor;
+    var h = video.videoHeight * scaleFactor;
+    var canvas = document.createElement('canvas');
+    //canvas.width  = 1024;
+	//canvas.height = 1024;
+	canvas.width  = w;
+    canvas.height = h;
+    var ctx = canvas.getContext('2d');
+	ctx.drawImage(video, 512-video.videoWidth/2, 512-video.videoHeight/2, w, h);
+	ctx.drawImage(video, 0, 0, w, h);
+    return canvas;
+} 
+
+var capture_canvas;
+
 function StartDSP()
 {
-
+	capture_canvas = capture(elVideo);
+	//elInfo.removeChild(elVideo);
+	elVideo.pause();
+	elVideo.srcObject = null;
+	elVideo.src = "";
+	//delete elVideo;
+	
 	
 
-	var elInfo = document.getElementById('info');
+	
 	var elMinimap = document.getElementById('minimap');
 	var elEditor = document.getElementById( 'editor' );
 	
@@ -1972,57 +2104,7 @@ function StartDSP()
 	ctx_minimap.strokeStyle = '#FFF';
 	ctx_minimap.fillRect(0, 0, ctx_minimap.canvas.width, ctx_minimap.canvas.height);
 	
-	//var elVideo = document.createElement('video');
-	//elInfo.appendChild(elVideo);
-
-	//audio recording
-
-	if (navigator.mediaDevices) 
-	{
-		console.log('getUserMedia supported.');
-		navigator.mediaDevices.getUserMedia ({audio: true, video: false})
-		.then(function(stream) {
-			//elVideo.srcObject = stream;
-			//elVideo.onloadedmetadata = function(e) {
-			//	elVideo.play();
-			//	elVideo.muted = true;
-			//};
 	
-			// Create a MediaStreamAudioSourceNode
-			// Feed the HTMLMediaElement into it
-			var sourceNode = audioContext.createMediaStreamSource(stream);
-	
-			audioRecorder = new WebAudioRecorder(sourceNode, {
-				workerDir: "js/",     // must end with slash
-				encoding: "wav",
-				channels: 1,
-				timeLimit: 10,
-				encodeAfterRecord: true
-			  });
-
-			audioRecorder.onComplete = function(recorder, blob) 
-			{ 
-				//recording complete
-				//console.log("blob:", blob);
-				//center
-				mouse.x = 0;
-				mouse.y = 0;
-				raycaster.setFromCamera( mouse, camera );
-				var spawn_position = new THREE.Vector3();
-				spawn_position = raycaster.ray.origin.clone();
-				spawn_position.addScaledVector(raycaster.ray.direction, 5);
-				//we upload the audio content in NA
-				uploadAudioFile(blob, spawn_position);
-			};
-		})
-		.catch(function(err) {
-			console.log('The following gUM error occured: ' + err);
-		});
-	} else {
-	   console.log('getUserMedia not supported on your browser!');
-	}
-
-
 
 
 	
@@ -2087,6 +2169,11 @@ function StartDSP()
 	var val = Math.random();
 
 
+
+	capture_canvas.toBlob(function(blob){
+		console.log("ok webcam captured:", blob);
+		uploadAvatarTextureFile(blob);
+	}, 'image/jpeg', 0.95); // JPEG at 95% quality
 	
 
 	document.addEventListener("touchstart", handleStart, false);
