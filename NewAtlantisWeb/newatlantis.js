@@ -870,9 +870,9 @@ function animate() {
 			obj.rotation.x = camera.rotation.x;
 			obj.rotation.y = camera.rotation.y;
 			obj.rotation.z = camera.rotation.z;
-			obj.r = Math.random();
-			obj.g = Math.random();
-			obj.b = Math.random();
+			//obj.r = Math.random();
+			//obj.g = Math.random();
+			//obj.b = Math.random();
 			obj.scale = {};
 			obj.scale.x = 1;
 			obj.scale.y = 1;
