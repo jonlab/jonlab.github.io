@@ -2422,9 +2422,9 @@ objectsRef.on('child_added', function (snapshot) {
 	space_objects[object.id] = newobj;
 	if (object.id === avatarname)
 	{
-		if (spawning_point === "" || spawning_point === null || spawning_point === undefined)
+		if (spawning_point === null || spawning_point === undefined)
 		{
-			console.log("restore avatar position");
+			console.log("restore avatar position", spawning_point );
 			UpdateLocalCamera(newobj); //this avatar, we update camera with the last known position
 		}
 	}
@@ -2443,7 +2443,7 @@ objectsRef.on('child_added', function (snapshot) {
 		{
 			Log("failed", 3);
 		}
-		spawning_point = undefined;
+		spawning_point = "";
 	}
 	
 	if (object.kind === "avatar")
