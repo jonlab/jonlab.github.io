@@ -1188,6 +1188,9 @@ function createObject(o)
 		texture.wrapS = THREE.RepeatWrapping;
 		texture.offset = new THREE.Vector2(-0.25,0);
 	}
+
+	
+
 	if (o.kind === "light" || o.kind === "avatar")
 	{	
 		material = new THREE.MeshBasicMaterial({ map: texture });
@@ -1206,9 +1209,11 @@ function createObject(o)
 
 
 	cube = new THREE.Mesh(geometry, material);
+	cube.current_texture = o.texture;
 	cube.position.x = o.x;
 	cube.position.y = o.y;
 	cube.position.z = o.z;
+	
 
 	cube.rotation.x = o.rotation.x;
 	cube.rotation.y = o.rotation.y;
@@ -2647,9 +2652,20 @@ function UpdateLocalObject(object)
 	object.object3D.rotation.x = object.remote.rotation.x;
 	object.object3D.rotation.y = object.remote.rotation.y;
 	object.object3D.rotation.z = object.remote.rotation.z;
-	object.object3D.material.color.r = object.remote.r;
-	object.object3D.material.color.g = object.remote.g;
-	object.object3D.material.color.b = object.remote.b;
+	if (object.remote.r !== undefined)
+		object.object3D.material.color.r = object.remote.r;
+	if (object.remote.g !== undefined)
+		object.object3D.material.color.g = object.remote.g;
+	if (object.remote.b !== undefined)
+		object.object3D.material.color.b = object.remote.b;
+
+	if (object.object3D.current_texture !== object.remote.texture)
+	{
+		//texture changed we update
+		object.object3D.material.map = new THREE.TextureLoader().load( object.remote.texture );
+		object.object3D.material.needsUpdate = true;
+		object.object3D.current_texture = object.remote.texture;
+	}
 }
 
 function UpdateLocalCamera(object)
