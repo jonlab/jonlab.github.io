@@ -40,6 +40,7 @@ var scene; //Three js 3D scene
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
 var cursor;
+var selfie;
 var physics;
 
 var avatarname = "";
@@ -541,6 +542,18 @@ cursor.position.x = 0;
 cursor.position.y = 0;
 cursor.position.z = -spawn_distance;
 camera.add(cursor);	
+
+
+/*
+var geometrySelfie = new THREE.PlaneBufferGeometry( 0.1,0.1,1,1);
+var materialSelfie = new THREE.MeshBasicMaterial({ color: 0xffffff });
+selfie = new THREE.Mesh(geometrySelfie, materialSelfie);
+selfie.position.x = 0;
+selfie.position.y = 1;
+selfie.position.z = -1;
+camera.add(selfie);	
+*/
+
 
 //============================
 //test rot
@@ -2111,7 +2124,13 @@ function StartDSP()
 	ctx_minimap.strokeStyle = '#FFF';
 	ctx_minimap.fillRect(0, 0, ctx_minimap.canvas.width, ctx_minimap.canvas.height);
 	
-	
+	//selfie
+	var elSelfie = document.getElementById('selfie');
+	var ctxSelfie = document.createElement('canvas').getContext('2d');
+	elSelfie.appendChild(ctxSelfie.canvas);
+	ctxSelfie.canvas.width = 64;
+	ctxSelfie.canvas.height = 48;
+	ctxSelfie.drawImage(capture_canvas, 0, 0, 64, 48);
 
 
 	
