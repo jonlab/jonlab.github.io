@@ -90,6 +90,8 @@ var loading_threshold = 500;
 
 var spawning_point="";
 
+var audio_notification = new Audio("sounds/poc.wav");
+audio_notification.loop = false;
 //VR
 var mode = "";
 var controller1, controller2;
@@ -2174,12 +2176,14 @@ function StartDSP()
 	var val = Math.random();
 
 
-
-	capture_canvas.toBlob(function(blob){
-		console.log("ok webcam captured:", blob);
-		uploadAvatarTextureFile(blob);
-	}, 'image/jpeg', 0.95); // JPEG at 95% quality
-	
+	if (avatarname !== "")
+	{
+		capture_canvas.toBlob(function(blob){
+			console.log("ok webcam captured:", blob);
+			uploadAvatarTextureFile(blob);
+		}, 'image/jpeg', 0.95); // JPEG at 95% quality
+	}
+		
 
 	document.addEventListener("touchstart", handleStart, false);
 	document.addEventListener("touchend", handleEnd, false);
@@ -2449,6 +2453,7 @@ objectsRef.on('child_added', function (snapshot) {
 	if (object.kind === "avatar")
 	{
 		avatars.push(object.name);
+		audio_notification.play();
 	}
 	minimap_dirty = true;
 	network_activity++;
@@ -2495,6 +2500,7 @@ postsRef.on('child_added', function (snapshot) {
 	//console.log("posts added", object);
 	var line = object.who + ": " + object.text;
 	Log(line, 4);
+	audio_notification.play();
 });
 
 
@@ -2897,10 +2903,11 @@ else if (arg === "whoishere")
 	var result = "";
 	for (var i in avatars)
 	{
-		result += avatars[i] + " ";		
+		result += avatars[i] + "\n";		
 		
 	}
 	Log(result, 0);
+	console.log(result);
 	return;
 }
 else if (arg === "stats")
