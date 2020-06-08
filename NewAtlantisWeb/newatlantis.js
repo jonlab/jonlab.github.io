@@ -1007,7 +1007,7 @@ function animate() {
 								o.object3D.audio.gain.disconnect(o.convolver); //we have to disconnect first
 								o.convolver = r.object3D.convolver;
 								o.object3D.audio.gain.connect(o.convolver);
-								Log("connect " + o.remote.name + " -> " + r.remote.name + " " + o.convolver);
+								//Log("connect " + o.remote.name + " -> " + r.remote.name + " " + o.convolver);
 							}
 							convolver = o.convolver;
 						}	
@@ -1022,7 +1022,7 @@ function animate() {
 								o.object3D.audio.gain.disconnect(o.afx); //we have to disconnect first
 								o.afx = r.object3D.fx;
 								o.object3D.audio.gain.connect(o.afx);
-								Log("connect " + o.remote.name + " -> " + r.remote.name + " " + o.afx);
+								//Log("connect " + o.remote.name + " -> " + r.remote.name + " " + o.afx);
 							}
 							afx = o.afx;
 						}	
@@ -1033,7 +1033,7 @@ function animate() {
 			if (afx === undefined && o.afx !== undefined)
 			{
 				//Log("afx is " + afx);
-				Log("disconnect " + o.remote.name + " -> " + r.remote.name + " " + o.afx);
+				//Log("disconnect " + o.remote.name + " -> " + r.remote.name + " " + o.afx);
 				try
 				{
 					o.object3D.audio.gain.disconnect(o.afx);
@@ -1047,7 +1047,7 @@ function animate() {
 			
 			if (convolver === undefined && o.convolver !== undefined)
 			{
-				Log("disconnect " + o.remote.name + " -> " + r.remote.name + " " + o.convolver);
+				//Log("disconnect " + o.remote.name + " -> " + r.remote.name + " " + o.convolver);
 				try
 				{
 					o.object3D.audio.gain.disconnect(o.convolver);
