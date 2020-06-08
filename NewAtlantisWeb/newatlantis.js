@@ -2476,8 +2476,11 @@ function StartDSP()
 			}
 			break;
 			case 13: //enter
+			if ((document.activeElement === chat_input))
+			{
 				OnChat(chat_input.value);
 				chat_input.value = "";
+			}
 			break;
 			case 17: //control
 				//ScriptCurrentSelection();
