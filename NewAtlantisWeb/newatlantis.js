@@ -1268,7 +1268,7 @@ function createObject(o)
 	var display_text = "";
 	//texte
 	//if (o.kind === "avatar")// || o.kind === "stream" || o.kind === "sound")
-	//if (o.kind === "avatar" || o.kind === "resonator")
+	if (o.kind === "avatar" || o.kind === "resonator" || o.kind === "sound")
 	{
 		if (o.name !== undefined)
 		{
@@ -2256,6 +2256,9 @@ function StartDSP()
 		//Log("mousedown");
 		if (editor.hasFocus())
 			return;
+		//if (document.activeElement === chat_input)
+		//	return;
+			
 		//picking
 		mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
 		mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
@@ -2384,6 +2387,10 @@ function StartDSP()
 	document.addEventListener('mouseup', (event) => {
 		if (editor.hasFocus())
 			return;
+		//if (document.activeElement === chat_input)
+		//	return;
+		//if (document.activeElement === chat_input)
+		//	return;
 		MouseDrag = false;
 		ObjectDrag = false;
 		if (object_selection !== undefined)
@@ -2400,6 +2407,10 @@ function StartDSP()
 		//console.log("release:"+nomTouche);
 		if (editor.hasFocus())
 			return;
+		//if (chat_input.hasFocus())
+		//	return;
+		//if (document.activeElement === chat_input)
+		//	return;
 
 		switch (event.keyCode) {
 			case 38: // up
@@ -2423,8 +2434,8 @@ function StartDSP()
 	document.addEventListener('keydown', (event) => {
 		const nomTouche = event.key;
 		//console.log("pressed:" + nomTouche);
-		if (editor.hasFocus())
-			return;
+		//if (editor.hasFocus())
+		//	return;
 		switch (event.keyCode) {
 			case 38: // up
 				MovingForward = true;
@@ -2439,10 +2450,30 @@ function StartDSP()
 				MovingRight = true;
 				break;
 			case 8: //backspace
-				if (parameters.editMode)
+				if (parameters.editMode && !(document.activeElement === chat_input))
 				{
 					DeleteCurrentSelection();
 				}
+			break;
+			case 32: //space
+			if (!(document.activeElement === chat_input))
+			{
+				if (selection !== undefined)
+				{
+					if (selection.remote.aplaying === false)
+					{
+						//Log("space play");
+						selection.remote.aplaying = true;
+					}
+					else
+					{
+						//Log("space stop");
+						selection.remote.aplaying = false;
+					}
+					UpdateRemoteObject(selection);
+
+				}
+			}
 			break;
 			case 13: //enter
 				OnChat(chat_input.value);
@@ -2740,7 +2771,7 @@ function UpdateLocalObject(object)
 	{
 		if (object.remote.aplaying && !object.object3D.audio.isPlaying)
 		{
-			//should play
+			//should playx
 			object.object3D.audio.play();
 			Log("audio play", 2);
 		}
