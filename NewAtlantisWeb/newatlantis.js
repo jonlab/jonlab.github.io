@@ -1435,6 +1435,7 @@ function createObject(o)
 			}
 			else
 			{
+				o.aplaying = true;
 				sound.play();
 			}
 			
