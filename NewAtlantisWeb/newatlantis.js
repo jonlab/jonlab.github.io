@@ -1425,7 +1425,19 @@ function createObject(o)
 			sound.setBuffer( buffer );
 			sound.setLoop( true );
 			sound.setVolume(1);
-			sound.play();
+			if (o.aplaying === true)
+			{
+				sound.play();
+			}
+			else if (o.aplaying === false)
+			{
+
+			}
+			else
+			{
+				sound.play();
+			}
+			
 			},
 			// onProgress callback
 			function ( xhr ) {
@@ -1787,7 +1799,9 @@ function moveCameraForward(distance) {
 
 function UpdateSelection()
 {
-	if (selection !== undefined)
+	PullTransformFromLocaObject(selection);
+	UpdateRemoteObject(selection);
+	/*if (selection !== undefined)
 	{
 		selection.remote.x = selection.object3D.position.x;
 		selection.remote.y = selection.object3D.position.y;
@@ -1800,6 +1814,33 @@ function UpdateSelection()
 		selection.remote.scale.z = selection.object3D.scale.z;
 		//console.log("update selection", selection);
 		firebase.database().ref('spaces/test/objects/' + selection.remote.id).set(selection.remote);
+	}
+	*/
+}
+
+
+function PullTransformFromLocaObject(o)
+{
+	if (o !== undefined)
+	{
+		o.remote.x = o.object3D.position.x;
+		o.remote.y = o.object3D.position.y;
+		o.remote.z = o.object3D.position.z;
+		o.remote.rotation.x = o.object3D.rotation.x;
+		o.remote.rotation.y = o.object3D.rotation.y;
+		o.remote.rotation.z = o.object3D.rotation.z;
+		o.remote.scale.x = o.object3D.scale.x;
+		o.remote.scale.y = o.object3D.scale.y;
+		o.remote.scale.z = o.object3D.scale.z;
+	}
+}
+
+
+function UpdateRemoteObject(o)
+{
+	if (o !== undefined)
+	{
+		firebase.database().ref('spaces/test/objects/' + o.remote.id).set(o.remote);
 	}
 }
 
@@ -2244,7 +2285,7 @@ function StartDSP()
 				//console.log("intersect with:",object_selection);
 				//console.log("selection:",selection);	
 			}
-			Log("clicked on " + selection.remote.name + " :: " + object_name, 2);
+			Log("clicked on " + selection.remote.name + " :: " + object_name + " now selected!", 2);
 			if (parameters.editMode)
 			{
 				ObjectDrag = true;
@@ -2518,8 +2559,10 @@ postsRef.on('child_added', function (snapshot) {
 	var object = snapshot.val();
 	//console.log("posts added", object);
 	var line = object.who + ": " + object.text;
+	console.log("post : " + line);
 	Log(line, 4);
 	audio_notification.play();
+	
 });
 
 
@@ -2690,6 +2733,23 @@ function UpdateLocalObject(object)
 		object.object3D.material.map = new THREE.TextureLoader().load( object.remote.texture );
 		object.object3D.material.needsUpdate = true;
 		object.object3D.current_texture = object.remote.texture;
+	}
+
+	//audio play/stop
+	if (object.object3D && object.object3D.audio)
+	{
+		if (object.remote.aplaying && !object.object3D.audio.isPlaying)
+		{
+			//should play
+			object.object3D.audio.play();
+			Log("audio play", 2);
+		}
+		if (!object.remote.aplaying && object.object3D.audio.isPlaying)
+		{
+			//should stop
+			object.object3D.audio.stop();
+			Log("audio stop", 2);
+		}
 	}
 }
 
@@ -2974,6 +3034,53 @@ else if (arg.startsWith("locate"))
 	}
 	
 
+	return;
+}
+else if (arg.startsWith("stop"))
+{
+	var res = arg.split(' ');
+	var name = res[1];
+	var target;
+	if (name === undefined || name === "")
+	{
+		target = selection;
+	}
+	else
+	{
+		console.log("looking for ", name);
+		target = GetActiveObjectByName(name)
+	}
+	if (target !== undefined && target.object3D !== undefined)
+	{
+		//target.object3D.audio.stop();
+		//Log("audio stopped!", 2);
+		target.remote.aplaying = false;
+		UpdateRemoteObject(target);
+	}
+	return;
+}
+
+else if (arg.startsWith("play"))
+{
+	var res = arg.split(' ');
+	var name = res[1];
+	var target;
+	if (name === undefined || name === "")
+	{
+		target = selection;
+	}
+	else
+	{
+		console.log("looking for ", name);
+		target = GetActiveObjectByName(name)
+	}
+	if (target !== undefined && target.object3D !== undefined)
+	{
+		//target.object3D.audio.play();
+		//Log("audio started!", 2);
+		target.remote.aplaying = true;
+		UpdateRemoteObject(target);
+	}
 	return;
 }
 
@@ -3282,6 +3389,19 @@ function GetObjectByName(name)
 	{
 		var target = space_objects[j];
 		if (target.remote.name === name)
+		{
+			return target;
+		}
+	}
+	return undefined;
+}
+
+function GetActiveObjectByName(name)
+{
+	for (var j in space_objects)
+	{
+		var target = space_objects[j];
+		if (target.remote.name === name && target.active)
 		{
 			return target;
 		}
