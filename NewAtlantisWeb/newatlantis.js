@@ -2172,7 +2172,7 @@ function StartDSP()
 	elSelfie.appendChild(ctxSelfie.canvas);
 	ctxSelfie.canvas.width = 64;
 	ctxSelfie.canvas.height = 48;
-	if (capture_canvas.width === 0 || capture_canvas.height === 0)
+	if (capture_canvas.width !== 0 || capture_canvas.height !== 0)
 		ctxSelfie.drawImage(capture_canvas, 0, 0, 64, 48);
 
 
