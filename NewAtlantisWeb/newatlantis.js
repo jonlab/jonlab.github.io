@@ -42,7 +42,7 @@ var mouse = new THREE.Vector2();
 var cursor;
 var selfie;
 var physics;
-
+var command;
 var avatarname = "";
 var main_timer = 0;
 var send_timer = 0;
@@ -59,6 +59,8 @@ var cubeCamera;
 
 var selection; //current target
 var object_selection;
+var inner_object_selection;
+var audio_object_selection;
 var listener;
 var fontLoader;
 var gltfLoader;
@@ -714,6 +716,33 @@ function AddGroundPlane(x,y,z,sizex, sizez)
 }
 
 
+function AddSphere(x,y,z,radius, col)
+{
+	var geometrySphere =  new THREE.SphereBufferGeometry(radius,16,8);
+	var materialSphere = new THREE.MeshStandardMaterial({ color: col, side: THREE.DoubleSide });
+	var o = new THREE.Mesh(geometrySphere, materialSphere);
+	o.position.x = x;
+	o.position.y = y;
+	o.position.z = z;
+	scene.add(o);
+}
+
+
+function AddLine(v1,v2, col)
+{
+	var material = new THREE.LineBasicMaterial({
+		color: col
+	});
+	
+	var points = [];
+	points.push( v1 );
+	points.push( v2);
+	var geometry = new THREE.BufferGeometry().setFromPoints( points );
+	var line = new THREE.Line( geometry, material );
+	scene.add( line );
+}
+
+
 var profiler0 = 0;
 var profiler1 = 0;
 var profiler2 = 0;
@@ -729,6 +758,19 @@ function animate() {
 	//frame++;
 	//if (frame%2!==0) //cap to 30 FPS
 	//return;
+
+	if (command !== undefined)
+	{
+		command.delay --;
+		if (command.delay <= 0)
+		{
+			if (command.kind === "clap")
+			{
+				Clap(command.space, command.source, command.listener);
+			}
+			command = undefined;
+		}
+	}
 
 	stats.begin();
 	var deadzone = 0.1;
@@ -1004,9 +1046,16 @@ function animate() {
 							if (o.convolver !== r.object3D.convolver)
 							{
 								//there was a change
-								o.object3D.audio.gain.disconnect(o.convolver); //we have to disconnect first
-								o.convolver = r.object3D.convolver;
-								o.object3D.audio.gain.connect(o.convolver);
+								try
+								{
+									o.object3D.audio.gain.disconnect(o.convolver); //we have to disconnect first
+									o.convolver = r.object3D.convolver;
+									o.object3D.audio.gain.connect(o.convolver);
+								}
+								catch (exception)
+								{
+
+								}
 								//Log("connect " + o.remote.name + " -> " + r.remote.name + " " + o.convolver);
 							}
 							convolver = o.convolver;
@@ -1018,11 +1067,18 @@ function animate() {
 							//we are inside a box
 							if (o.afx !== r.object3D.fx)
 							{
-								//there was a change 
-								o.object3D.audio.gain.disconnect(o.afx); //we have to disconnect first
-								o.afx = r.object3D.fx;
-								o.object3D.audio.gain.connect(o.afx);
-								//Log("connect " + o.remote.name + " -> " + r.remote.name + " " + o.afx);
+								try
+								{
+									//there was a change 
+									o.object3D.audio.gain.disconnect(o.afx); //we have to disconnect first
+									o.afx = r.object3D.fx;
+									o.object3D.audio.gain.connect(o.afx);
+									//Log("connect " + o.remote.name + " -> " + r.remote.name + " " + o.afx);
+								}
+								catch (exception)
+								{
+
+								}
 							}
 							afx = o.afx;
 						}	
@@ -1171,7 +1227,7 @@ function createObject(o)
 	}
 	else if (o.kind === "cylinder")
 	{
-		geometry = new THREE.CylinderGeometry( 1, 1, 2, 16 );
+		geometry = new THREE.CylinderBufferGeometry( 1, 1, 2, 16 );
 	}
 	else if (o.kind === "cone")
 	{
@@ -1184,7 +1240,7 @@ function createObject(o)
 	else if (o.kind === "island")
 	{	
 		//top radius / bottom radius / height
-		geometry = new THREE.CylinderGeometry( 40, 50, 2, 16 );
+		geometry = new THREE.CylinderBufferGeometry( 40, 50, 2, 16 );
 	}
 	else if (o.kind === "light")
 	{	
@@ -1302,7 +1358,7 @@ function createObject(o)
 
 	if (o.kind === "light")
 	{
-		var light = new THREE.PointLight(0xffffff, 1, 30, 2);
+		var light = new THREE.PointLight(0xffffff, 1, 100, 2);
 		cube.add(light);
 	}
 	else if (o.kind === "avatar")
@@ -2273,6 +2329,7 @@ function StartDSP()
 		{
 			var last_selection = selection;
 			object_selection = intersections[ 0 ].object;
+			inner_object_selection = object_selection;
 			var object_name = object_selection.name;
 			
 			//console.log(object_selection);
@@ -2289,6 +2346,12 @@ function StartDSP()
 				selection = objects_main[object_selection.uuid];
 				//console.log("intersect with:",object_selection);
 				//console.log("selection:",selection);	
+			}
+
+			if (selection.remote.kind === "sound")
+			{
+				Log("audio source selected!");
+				audio_object_selection = selection.object3D;
 			}
 			Log("clicked on " + selection.remote.name + " :: " + object_name + " now selected!", 2);
 			if (parameters.editMode)
@@ -3119,7 +3182,24 @@ else if (arg.startsWith("play"))
 	}
 	return;
 }
-
+else if (arg.startsWith("clap"))
+{
+	console.log("geometry=" , inner_object_selection.geometry);
+	var listener_pos = new THREE.Vector3(0,0,0);
+	listener.getWorldPosition(listener_pos);
+	var source_pos = audio_object_selection.position;
+	Log("ray paths compute...", 2);
+	//Log("audio source: " + source_pos, 2);
+	//Log("audio listener: " + listener_pos, 2);
+	Log("please wait...", 2);
+	UpdateLog();
+	command = {};
+	command.kind = "clap";
+	command.delay = 10;
+	command.space = inner_object_selection;
+	command.source = source_pos;
+	command.listener = listener_pos;
+}
 
 
 	var postData = 
@@ -3233,6 +3313,133 @@ function UpdateMinimap()
 	}
 }
 
+function Clap(space_object, source_pos, listener_pos)
+{
+	var g = space_object.geometry;
+	var vertices = g.getAttribute("position");
+	console.log("indices:", g.index);
+	console.log("vertices:", vertices);
+	
+	var v1 = new THREE.Vector3(0,0,0);
+	var v2 = new THREE.Vector3(0,0,0);
+	var v3 = new THREE.Vector3(0,0,0);
+	var dir = new THREE.Vector3(0,0,0);
+	var closest = new THREE.Vector3(0,0,0);
+	var plane = new THREE.Plane(new THREE.Vector3(0,1,0),0);
+	var projection = new THREE.Vector3(0,0,0);
+	var mirror = new THREE.Vector3(0,0,0);
+	//console.log("listener_pos:", listener_pos);
+	//console.log("source_pos:", source_pos);
+	//AddSphere(source_pos.x, source_pos.y, source_pos.z, 1);
+	var spaces = [];
+	spaces.push(space_object);
+	AddLine(source_pos, listener_pos, 0x00FF00);
+	var ray_count = 0;
+	for (var i=0;i<g.index.count/3;++i)
+	{
+		//for each triangle
+		var n1 = g.index.array[i*3+0];
+		var n2 = g.index.array[i*3+1];
+		var n3 = g.index.array[i*3+2];
+
+		var x1 = vertices.array[n1*3+0];
+		var y1 = vertices.array[n1*3+1];
+		var z1 = vertices.array[n1*3+2];
+
+		var x2 = vertices.array[n2*3+0];
+		var y2 = vertices.array[n2*3+1];
+		var z2 = vertices.array[n2*3+2];
+
+		var x3 = vertices.array[n3*3+0];
+		var y3 = vertices.array[n3*3+1];
+		var z3 = vertices.array[n3*3+2];
+
+		v1.set(x1,y1,z1);
+		v2.set(x2,y2,z2);
+		v3.set(x3,y3,z3);
+
+		v1.applyMatrix4(space_object.matrixWorld);
+		v2.applyMatrix4(space_object.matrixWorld);
+		v3.applyMatrix4(space_object.matrixWorld);
+
+		//AddSphere(v1.x, v1.y, v1.z, 1, 0x00FF0000);
+		//AddSphere(v2.x, v2.y, v2.z, 1, 0x00FF0000);
+		//AddSphere(v3.x, v3.y, v3.z, 1, 0x00FF0000);
+		var triangle = new THREE.Triangle(v1,v2,v3);
+		
+		//build plane
+		//console.log("check triangle:", x, y, z);
+		plane.setFromCoplanarPoints(v1, v2, v3);
+		plane.projectPoint(source_pos, projection); //project on plane
+		
+		//calculate mirror
+		var mx = source_pos.x+(projection.x-source_pos.x)*2;
+		var my = source_pos.y+(projection.y-source_pos.y)*2;
+		var mz = source_pos.z+(projection.z-source_pos.z)*2;
+		mirror.set(mx, my, mz);
+		//console.log("projection:", projection);
+		//console.log("mirror:", mirror);
+		//var dir = mirror.clone();
+		//dir.sub(listener);
+		dir.x = projection.x-listener_pos.x;
+		dir.y = projection.y-listener_pos.y;
+		dir.z = projection.z-listener_pos.z;
+
+		//AddSphere(projection.x, projection.y, projection.z, 1, 0x0000FF00);
+		
+
+		dir.normalize();
+		raycaster.ray.origin.set(listener_pos.x, listener_pos.y, listener_pos.z);
+		raycaster.ray.direction.set(dir.x, dir.y, dir.z); 
+
+
+		//AddLine(listener_pos, projection);
+		//AddLine(listener_pos, projection);
+
+
+
+		var result = raycaster.intersectObjects( spaces, true);
+		//console.log("result len=" + result.length);
+
+		if (result.length > 0)
+		{
+			/*
+			console.log("v1:", v1);
+			console.log("v2:", v2);
+			console.log("v3:", v3);
+			console.log("plane:", plane);
+			console.log("mirror:", projection);
+			*/
+			var pos = result[ 0 ].point;
+			triangle.closestPointToPoint(pos, closest);
+			var d = pos.distanceTo(closest);
+			//if (triangle.containsPoint(pos))
+			if (d<1)
+			{
+				ray_count++;
+				//console.log("ping!");
+				//console.log("hit:", result[0]);
+				//we have to check if this is inside triangle
+				AddSphere(pos.x, pos.y, pos.z, 0.1, 0x0000FF);
+				AddLine(pos, listener_pos, 0x0000FF);
+				AddLine(source_pos, pos, 0x00FF00);
+			}
+		}
+		/*
+		tempMatrix.identity().extractRotation( controller.matrixWorld );
+
+		raycaster.ray.origin.setFromMatrixPosition( controller.(matrixWorld) );
+		raycaster.ray.direction.set( 0, 0, - 1 ).applyMatrix4( tempMatrix );
+
+		return raycaster.intersectObjects( group.children );
+		*/
+
+
+	}
+
+	Log("first order ray count: " + ray_count, 2);
+
+}
 
 function PlotOnMinimap(worldposition, category)
 {
