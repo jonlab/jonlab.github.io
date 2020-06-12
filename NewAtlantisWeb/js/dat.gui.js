@@ -1168,6 +1168,7 @@ var NumberControllerBox = function (_NumberController) {
         _this.__truncationSuspended = false;
         onFinish();
       }
+      
     });
     _this2.updateDisplay();
     _this2.domElement.appendChild(_this2.__input);
@@ -1935,7 +1936,7 @@ GUI.TEXT_CLOSED = 'Close Controls';
 GUI.TEXT_OPEN = 'Open Controls';
 GUI._keydownHandler = function (e) {
   if (document.activeElement.type !== 'text' && (e.which === HIDE_KEY_CODE || e.keyCode === HIDE_KEY_CODE)) {
-    GUI.toggleHide();
+    //GUI.toggleHide();
   }
 };
 dom.bind(window, 'keydown', GUI._keydownHandler, false);

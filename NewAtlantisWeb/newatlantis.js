@@ -24,6 +24,8 @@ var logx = 0;
 var logy = 10;
 var log_dirty = false;
 
+var posts = [];
+
 var minimap_dirty = false;
 var network_activity = 0;
 var network_bytes = 0;
@@ -696,6 +698,8 @@ window.addEventListener('resize', onWindowResize, false);
 function Login()
 {
 	avatarname = document.getElementById('avatarname').value;
+	localStorage.setItem("username", avatarname);
+	
 }
 
 function AddGroundPlane(x,y,z,sizex, sizez)
@@ -2051,6 +2055,8 @@ var gamepad_buttons = [];
 
 var editor;
 
+document.getElementById('avatarname').value = localStorage.getItem("username");
+
 
 var elInfo = document.getElementById('info');
 var elWebcam = document.getElementById('webcam');
@@ -2058,6 +2064,7 @@ var elWebcam = document.getElementById('webcam');
 var elVideo = document.createElement('video');
 elVideo.height = 200;
 elWebcam.appendChild(elVideo);
+
 
 //audio recording
 
@@ -2499,8 +2506,8 @@ function StartDSP()
 	document.addEventListener('keydown', (event) => {
 		const nomTouche = event.key;
 		//console.log("pressed:" + nomTouche);
-		//if (editor.hasFocus())
-		//	return;
+		if (editor.hasFocus())
+			return;
 		switch (event.keyCode) {
 			case 38: // up
 				MovingForward = true;
@@ -2515,7 +2522,7 @@ function StartDSP()
 				MovingRight = true;
 				break;
 			case 8: //backspace
-				if (parameters.editMode && !(document.activeElement === chat_input))
+				if (parameters.editMode && (!(document.activeElement === chat_input) && !(editor.hasFocus())))
 				{
 					DeleteCurrentSelection();
 				}
@@ -2660,6 +2667,7 @@ postsRef.on('child_added', function (snapshot) {
 	var line = object.who + ": " + object.text;
 	console.log("post : " + line);
 	Log(line, 4);
+	posts.push(line);
 	audio_notification.play();
 	
 });
@@ -3199,6 +3207,19 @@ else if (arg.startsWith("clap"))
 	command.space = inner_object_selection;
 	command.source = source_pos;
 	command.listener = listener_pos;
+}
+else if (arg.startsWith("posts"))
+{
+	var all = "";
+	for (var i in posts)
+	{
+		var p = posts[i];
+		all+= p;
+		all+= "\n";
+	}
+	console.log(all);
+	return;
+	
 }
 
 
