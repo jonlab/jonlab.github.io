@@ -3327,6 +3327,20 @@ else if (arg.startsWith("clap"))
 	command.space = inner_object_selection;
 	command.source = source_pos;
 	command.listener = listener_pos;
+	return;
+}
+else if (arg.startsWith("bang"))
+{
+	console.log("geometry=" , inner_object_selection.geometry);
+	var listener_pos = new THREE.Vector3(0,0,0);
+	listener.getWorldPosition(listener_pos);
+	var listener_direction = new THREE.Vector3(0,0,0);
+	listener.getWorldDirection(listener_direction);
+	listener_direction.negate();
+	Log("ray paths compute...", 2);
+	Log("please wait...", 2);
+	Bang(inner_object_selection, listener_pos, listener_direction, 10);
+	return;
 }
 else if (arg.startsWith("posts"))
 {
@@ -3452,6 +3466,37 @@ function UpdateMinimap()
 		ctx_minimap.fillStyle = '#FFF';
 		ctx_minimap.fillText("mess:"+network_activity + " d:" + network_bytes+" o:" + objects.length, 0, 200 );
 	}
+}
+
+
+
+function Bang(space_object, source_pos, direction, order)
+{
+	if (order <= 0)
+		return;
+	raycaster.ray.origin.set(source_pos.x, source_pos.y, source_pos.z);
+	raycaster.ray.direction.set(direction.x, direction.y, direction.z); 
+	var spaces = [];
+	spaces.push(space_object);
+	var result = raycaster.intersectObjects( spaces, true);
+	if (result.length > 0)
+	{
+		//console.log("result=", result);
+		//result[0].distance
+		var pos = result[ 0 ].point;
+		
+		AddSphere(pos.x, pos.y, pos.z, 0.1, 0x0000FF);
+		AddLine(source_pos, pos, 0x0000FF);
+
+		direction.reflect(result[0].face.normal);
+		order = order-1;
+		Bang(space_object, pos, direction, order);
+	}
+
+	//Bang()
+
+
+
 }
 
 function Clap(space_object, source_pos, listener_pos)
