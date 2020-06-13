@@ -8,6 +8,17 @@ import { VRButton } from './examples/jsm/webxr/VRButton.js';
 import { XRControllerModelFactory } from './examples/jsm/webxr/XRControllerModelFactory.js';
 
 const PhysicsEnabled = false;
+
+const LOG_INFO = 0;
+const LOG_OK = 1;
+const LOG_WARNING = 2;
+const LOG_ERROR = 3;
+const LOG_CHAT = 4;
+
+const ROLL_OFF_FACTOR = 1.7;
+const ROLL_OFF_FACTOR_SPACE = 1.2;
+
+
 /**
  * NEW ATLANTIS WEB POC
  */
@@ -21,8 +32,11 @@ var ObjectDrag = false;
 var control;
 var spawn_distance = 3;
 var logx = 0;
+var chatx = 0;
+
 var logy = 10;
 var log_dirty = false;
+var chat_dirty = false;
 
 var posts = [];
 
@@ -34,9 +48,10 @@ var frame = 0;
 var midi = null;  // global MIDIAccess object
 
 //freesound API
-var baseurl_freesoundsearch = "https://freesound.org/apiv2/search/text/?token=IcsqGmC1CiYHNtyWpZ4ETJFHb8OM5QhzZYb3AzGj&fields=previews,description,name&query=";
+var baseurl_freesoundsearch = "https://freesound.org/apiv2/search/text/?token=IcsqGmC1CiYHNtyWpZ4ETJFHb8OM5QhzZYb3AzGj&fields=previews,description,name,duration&filter=duration:[0 TO 60]&query=";
 var controller_freesound;
 var controller_createfreesound;
+var freesound_list;
 
 var scene; //Three js 3D scene
 var raycaster = new THREE.Raycaster();
@@ -81,7 +96,11 @@ var dir = new THREE.Vector3();
 var euler = new THREE.Euler(0, 0, 0, 'YXZ');
 
 var ctx;
+var ctxChat;
+var chats = [];
+
 var logs = [];
+
 var chat_input;
 var chat_button;
 
@@ -151,9 +170,9 @@ var Inspector = function()
 	};
 	this.startTutorial = function()
 	{
-		Log("use the arrows to move around...", 0);
-		Log("click and drag to look around...", 0);
-		Log("...tutorial in progress...", 0);
+		Log("use the arrows to move around...", LOG_INFO);
+		Log("click and drag to look around...", LOG_INFO);
+		Log("...tutorial in progress...", LOG_INFO);
 	};
 	this.createSource = function()
 	{
@@ -164,19 +183,30 @@ var Inspector = function()
 	this.startRecording = function()
 	{
 		audioRecorder.startRecording();
-		Log("recording started...", 3);
+		Log("recording started...", LOG_ERROR);
 	};
 
 	this.stopRecording = function()
 	{
 		audioRecorder.finishRecording();
-		Log("recording stopped...", 2);
+		Log("recording stopped...", LOG_WARNING);
 	};
 
 	this.createFreesound = function()
 	{
 		var url = this.freesound;
-		ActionSound(url);
+		var name = "freesound";
+		for (var i in freesound_list)
+		{
+			console.log("check " + i);
+			var _url = freesound_list[i];
+			if (url === _url)
+			{
+				name = i;
+				console.log("ok !");
+			}
+		}
+		ActionSound(url, name);
 	};
 
 	this.createObject = function()
@@ -223,11 +253,12 @@ var Inspector = function()
 			var result = JSON.parse(req.response);
 			//console.log("freesound returned:", result);
 			//construct the results UI
-			var freesound_list = {};
+			freesound_list = {};
 			for (var i in result.results)
 			{
 				var entry = result.results[i];
-				freesound_list[entry.name] = entry.previews['preview-hq-mp3'];
+				var key = entry.name+"["+entry.duration+"s]";
+				freesound_list[key] = entry.previews['preview-hq-mp3'];
 				
 			}
 			if (controller_freesound !== undefined)
@@ -305,6 +336,7 @@ var Inspector = function()
 
 
 
+
 function Log(message, color) 
 {
 	var m = {};
@@ -340,7 +372,43 @@ function Log(message, color)
 	
 }
 
+function Chat(who, message) 
+{
+	var m = {};
+	m.text = who+": " + message;
+	var ncol = intToRGB(hashCode(who));
+	//Log(ncol);
+	m.color = '#'+ncol;
+	chats.push(m);
+	log_dirty = true;
+}
 
+/*
+function UpdateChat()
+{
+	//rerender if needs to
+	if (chat_dirty && ctx !== undefined)
+	{
+		chat_dirty = false;
+		ctxChat.fillStyle = '#000';
+		ctxChat.fillRect(0, 0, ctxChat.canvas.width, ctxChat.canvas.height);
+		logy = 10;
+		
+		var end = chats.length-1;
+		var count = 21;
+		var start =  end-count;
+		if (start < 0)
+			start = 0;
+		for (var l=start;l<=end;++l)
+		{
+			var m = chats[l];
+			ctxChat.fillStyle = m.color;
+			ctxChat.fillText(m.text, logx, logy );
+			logy+=10;
+		}
+	}
+}
+*/
 function UpdateLog()
 {
 	//rerender if needs to
@@ -349,8 +417,8 @@ function UpdateLog()
 		log_dirty = false;
 		ctx.fillStyle = '#000';
 		ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-		logy = 10;
 		
+		logy = 10;
 		var end = logs.length-1;
 		var count = 21;
 		var start =  end-count;
@@ -360,11 +428,31 @@ function UpdateLog()
 		{
 			var m = logs[l];
 			ctx.fillStyle = m.color;
-			ctx.fillText(m.text, logx, logy );
+			ctx.fillText(m.text, logx, logy);
+			logy+=10;
+		}
+		//draw chat messages
+		ctx.fillStyle = '#000';
+		ctx.fillRect(ctx.canvas.width/2, 0, ctx.canvas.width, ctx.canvas.height);
+		logy = 10;
+		var end = chats.length-1;
+		var count = 21;
+		var start =  end-count;
+		if (start < 0)
+			start = 0;
+		for (var l=start;l<=end;++l)
+		{
+			var m = chats[l];
+			
+			ctx.fillStyle = m.color;
+			
+			ctx.fillText(m.text, chatx, logy );
 			logy+=10;
 		}
 	}
 }
+
+
 function _Log(message, color) 
 {
 	
@@ -1003,8 +1091,8 @@ function animate() {
 			}
 			catch (exception)
 			{
-				Log(exception,3);
-				Log(target.remote.kind + ":" + target.remote.name);
+				Log(exception,LOG_ERROR);
+				Log(target.remote.kind + ":" + target.remote.name, LOG_ERROR);
 				target.remote.playing = false;
 				console.log("script stopped because of an exception");
 			}
@@ -1100,7 +1188,7 @@ function animate() {
 				}
 				catch (exception)
 				{
-					Log(exception, 3);
+					Log(exception, LOG_ERROR);
 				}
 				o.afx = undefined; 
 			}
@@ -1114,7 +1202,7 @@ function animate() {
 				}
 				catch (exception)
 				{
-					Log(exception, 3);
+					Log(exception, LOG_ERROR);
 				}
 				o.convolver = undefined; 
 			}
@@ -1147,6 +1235,7 @@ function animate() {
 	profiler5 = ProfilerStop();
 	ProfilerStart();
 	UpdateLog();
+	//UpdateChat();
 	if (avatar_dirty)
 	{
 		minimap_dirty = true;
@@ -1198,7 +1287,7 @@ function createObject(o)
 {
 	var cube;
 	
-	Log("create object "+ o.kind + " " + o.name, 1);
+	Log("create object "+ o.kind + " " + o.name, LOG_INFO);
 	//console.log("create object "+ o.kind);
 	var geometry;
 	if (o.kind === "cube")
@@ -1352,7 +1441,7 @@ function createObject(o)
 			var materialText = new THREE.MeshPhongMaterial();
 			var text = new THREE.Mesh(geometryText, materialText);
 			cube.add(text);
-			text.scale.set(0.01,0.01,0.01);
+			text.scale.set(0.005,0.005,0.005);
 			text.position.y = 1;
 			text.rotation.y = Math.PI;
 			//console.log("text", text);
@@ -1382,7 +1471,7 @@ function createObject(o)
 		var sound = new THREE.PositionalAudio( listener );
 		try
 		{
-			Log("read pd patch...", 0);
+			Log("read pd patch...", LOG_INFO);
 			//console.log("read pd patch:", o.pd);
 			patch = Pd.loadPatch(o.pd);
 			//Pd.start();
@@ -1399,11 +1488,11 @@ function createObject(o)
 		}
 		catch (exception)
 		{
-			Log("PD patch loading exception:" + exception, 3);
+			Log("PD patch loading exception:" + exception, LOG_ERROR);
 			console.log("PD patch loading exception:", exception);
 		}
 		sound.setRefDistance( 1 );
-		sound.setRolloffFactor(1.2);
+		sound.setRolloffFactor(ROLL_OFF_FACTOR);
 		sound.setDistanceModel("exponential");
 		sound.play();
 		cube.add(sound);
@@ -1481,7 +1570,8 @@ function createObject(o)
 			var audioLoader = new THREE.AudioLoader();
 			audioLoader.load( o.url, function( buffer ) {
 				//console.log("LOADED!", buffer);
-				Log("loaded sound " + o.url + " - " + buffer.length/1000 + "k samples", 1);
+				Log("loaded sound #" +o.id + " " + o.url + " - " + buffer.length/1000 + "k samples", LOG_INFO);
+
 			sound.setBuffer( buffer );
 			sound.setLoop( true );
 			sound.setVolume(1);
@@ -1508,11 +1598,11 @@ function createObject(o)
 			// onError callback
 			function ( err ) {
 				console.log( 'An error happened' );
-				Log("error loading sound " + o.url, 3);
+				Log("error loading sound " + o.url, LOG_ERROR);
 			}
 			);
 			sound.setRefDistance(1);
-			sound.setRolloffFactor(1.2);
+			sound.setRolloffFactor(ROLL_OFF_FACTOR);
 			sound.setMaxDistance(10000);
 			sound.panner.panningModel = 'equalpower';
 			//sound.panner.panningModel = 'HRTF';
@@ -1527,11 +1617,11 @@ function createObject(o)
 			var audioLoader = new THREE.AudioLoader();
 			audioLoader.load( o.ir, function( buffer ) {
 				console.log("LOADED!", buffer);
-				Log("loaded IR " + o.ir, 1);
+				Log("loaded IR " + o.ir, LOG_INFO);
 				cube.convolver.buffer = buffer;
 			});
 			sound.setRefDistance( 1 );
-			sound.setRolloffFactor(1);
+			sound.setRolloffFactor(ROLL_OFF_FACTOR_SPACE);
 			sound.setDistanceModel("exponential");
 			cube.convolver.connect( sound.listener.getInput() ); //connect to output
 		}	
@@ -1633,7 +1723,7 @@ function createObject(o)
 			else if (o.fx === "waveshaper")
 				cube.fx = audioContext.createWaveShaper();
 			sound.setRefDistance(1);
-			sound.setRolloffFactor(1.2);
+			sound.setRolloffFactor(ROLL_OFF_FACTOR);
 			sound.setDistanceModel("exponential");
 			if (cube.fx !== undefined)
 			{
@@ -1710,7 +1800,7 @@ function uploadModelFile(file, worldposition, worldrotation)
 	var fileRef = audioRef.child(uuidv4());
 
 	var url = fileRef.fullPath;
-	Log("uploading to " + url, 2);
+	Log("uploading to " + url, LOG_WARNING);
 	fileRef.put(file).then(function(snapshot) 
 	{
 		console.log('Uploaded a blob or file! ');			
@@ -1744,7 +1834,7 @@ function uploadModelFile(file, worldposition, worldrotation)
 
 function openFileAudio(event) {
 	var file = event.target.files[0];
-	Log("try to upload " + file.name, 2);
+	Log("try to upload " + file.name, LOG_WARNING);
 	uploadAudioFile(file);
 }
 
@@ -1784,7 +1874,7 @@ function uploadAudioFile(file, worldposition)
 	var fileRef = audioRef.child(uuidv4());
 
 	var url = fileRef.fullPath;
-	Log("uploading to " + url, 2);
+	Log("uploading to " + url, LOG_WARNING);
 	fileRef.put(file).then(function(snapshot) 
 	{
 		console.log('Uploaded a blob or file! ');			
@@ -1797,7 +1887,7 @@ function uploadAudioFile(file, worldposition)
 		}
 		fileRef.getDownloadURL().then(function(url) {
 			obj.url = url;
-			obj.name = "audio file";
+			obj.name = file.name;
 			firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
 		}).catch(function(error) {
 			// Handle any errors
@@ -1816,7 +1906,7 @@ function uploadAvatarTextureFile(file)
 	var audioRef = storageRef.child('avatars');
 	var fileRef = audioRef.child(uuidv4());
 	var url = fileRef.fullPath;
-	Log("uploading to " + url, 2);
+	Log("uploading to " + url, LOG_WARNING);
 	fileRef.put(file).then(function(snapshot) 
 	{
 		console.log('Uploaded a blob or file! ');			
@@ -1828,7 +1918,7 @@ function uploadAvatarTextureFile(file)
 
 		}).catch(function(error) {
 			// Handle any errors
-			Log("uploadAvatarTextureFile error", 1);
+			Log("uploadAvatarTextureFile error", LOG_ERROR);
 		  });
 	});
 }
@@ -2059,7 +2149,9 @@ document.getElementById('avatarname').value = localStorage.getItem("username");
 
 
 var elInfo = document.getElementById('info');
+var elChat = document.getElementById('chat');
 var elWebcam = document.getElementById('webcam');
+var elChatUI = document.getElementById('chat_ui');
 
 var elVideo = document.createElement('video');
 elVideo.height = 200;
@@ -2166,12 +2258,23 @@ function StartDSP()
 	//log canvas
 	ctx = document.createElement('canvas').getContext('2d');
 	elInfo.appendChild(ctx.canvas);
-	ctx.canvas.width = window.innerWidth/2;
+	ctx.canvas.width = window.innerWidth*0.7;
 	ctx.canvas.height = 230;
 	ctx.fillStyle = '#000';
 	ctx.strokeStyle = '#FFF';
 	ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-
+	chatx = window.innerWidth*0.35;
+	//chat canvas
+	/*
+	ctxChat = document.createElement('canvas').getContext('2d');
+	elInfo.appendChild(ctxChat.canvas);
+	ctxChat.canvas.width = window.innerWidth/4;
+	ctxChat.canvas.height = 230;
+	//ctxChat.canvas.style.left = window.innerWidth/4 + "px";
+	ctxChat.fillStyle = '#000';
+	ctxChat.strokeStyle = '#FFF';
+	ctxChat.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+	*/
 	
 	
 
@@ -2242,7 +2345,7 @@ function StartDSP()
 	
 
 	function onMIDISuccess( midiAccess ) {
-	Log( "MIDI ready!" , 1);
+	Log( "MIDI ready!" , LOG_OK);
 	
 
 	midi = midiAccess;  // store in the global (in real usage, would probably keep in an object instance)
@@ -2251,7 +2354,7 @@ function StartDSP()
 	}
 
 	function onMIDIFailure(msg) {
-	Log( "Failed to get MIDI access - " + msg , 3);
+	Log( "Failed to get MIDI access - " + msg , LOG_ERROR);
 	}
 
 	if (typeof navigator.requestMIDIAccess === 'function')
@@ -2260,22 +2363,22 @@ function StartDSP()
 	}
 	else
 	{
-		Log( "Failed to get MIDI access", 3);
+		Log( "Failed to get MIDI access", LOG_ERROR);
 	}
 	
 
 
 	Login();
-	Log("Welcome to New Atlantis...", 0);
-	Log("If you have a gamepad, press any button to activate and calibrate it!", 0);
+	Log("Welcome to New Atlantis...", LOG_INFO);
+	Log("If you have a gamepad, press any button to activate and calibrate it!", LOG_INFO);
 
 
 	//TestEval();
 
 	if (avatarname === "")
-		Log("You are spectator", 2)
+		Log("You are spectator", LOG_WARNING)
 	else
-		Log("You are logged as " + avatarname, 1);
+		Log("You are logged as " + avatarname, LOG_OK);
 	
 	//overlay
 	var overlay = document.getElementById( 'overlay' );
@@ -2354,13 +2457,23 @@ function StartDSP()
 				//console.log("intersect with:",object_selection);
 				//console.log("selection:",selection);	
 			}
+			if (last_selection !== undefined && (last_selection.remote.kind === "sound" || last_selection.remote.kind === "resonator"))
+			{
+				last_selection.object3D.audio.setRolloffFactor(ROLL_OFF_FACTOR);
+			}
 
+			if (selection.remote.kind === "sound" || selection.remote.kind === "resonator")
+			{
+				//zoom effect
+				selection.object3D.audio.setRolloffFactor(0.5);
+			}
 			if (selection.remote.kind === "sound")
 			{
-				Log("audio source selected!");
+				//Log("audio source selected!");
 				audio_object_selection = selection.object3D;
+				
 			}
-			Log("clicked on " + selection.remote.name + " :: " + object_name + " now selected!", 2);
+			Log("clicked on " + selection.remote.name + " :: " + object_name + " now selected!", LOG_OK);
 			if (parameters.editMode)
 			{
 				ObjectDrag = true;
@@ -2381,7 +2494,7 @@ function StartDSP()
 						}
 						catch (exception)
 						{
-							Log(exception, 3);
+							Log(exception, LOG_ERROR);
 						}
 					}
 
@@ -2432,7 +2545,7 @@ function StartDSP()
 					}
 					catch (exception)
 					{
-						Log(exception, 3);
+						Log(exception, LOG_ERROR);
 					}
 				}
 				object_selection = undefined;
@@ -2450,6 +2563,10 @@ function StartDSP()
 			}
 			control.detach();
 			MouseDrag = true;
+			if (selection !== undefined && (selection.remote.kind === "sound" || selection.remote.kind === "resonator"))
+			{
+				selection.object3D.audio.setRolloffFactor(ROLL_OFF_FACTOR);
+			}
 		}
 		
 
@@ -2601,17 +2718,17 @@ objectsRef.on('child_added', function (snapshot) {
 	if (spawning_point === object.name)
 	{
 		
-		Log("go to spawning point " + spawning_point, 1);
+		Log("go to spawning point " + spawning_point, LOG_OK);
 		var target = GetObjectByName(spawning_point)
 		if (target !== undefined)
 		{
 
 			UpdateLocalCamera(target);
-			Log("success", 1);
+			//Log("success", 1);
 		}
 		else
 		{
-			Log("failed", 3);
+			Log("failed, object not found", LOG_ERROR);
 		}
 		spawning_point = "";
 	}
@@ -2664,9 +2781,9 @@ postsRef.on('child_changed', function (snapshot) {
 postsRef.on('child_added', function (snapshot) {
 	var object = snapshot.val();
 	//console.log("posts added", object);
-	var line = object.who + ": " + object.text;
-	console.log("post : " + line);
-	Log(line, 4);
+	//var line = object.who + ": " + object.text;
+	//console.log("post : " + line);
+	Chat(object.who, object.text);
 	posts.push(line);
 	audio_notification.play();
 	
@@ -2727,10 +2844,13 @@ function ActionObject(kind, name)
 }
 
 
-function ActionSound(url)
+function ActionSound(url, name)
 {
 	var obj= getNewObjectCommand("sound");
-	obj.name = "sound";
+	if (name !== undefined)
+		obj.name = name;
+	else
+		obj.name = url;
 	obj.url = url;
 	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
 }
@@ -2755,7 +2875,7 @@ function ActionBox(fx)
 function DeleteCurrentSelection()
 {
 	control.detach();
-	Log("delete object " + selection.remote.name + "(" + selection.remote.kind + ")", 2);
+	Log("delete object " + selection.remote.name + "(" + selection.remote.kind + ")", LOG_WARNING);
 	firebase.database().ref('spaces/test/objects/' + selection.remote.id).remove();
 	selection = undefined;
 	object_selection = undefined;
@@ -2767,11 +2887,11 @@ function ScriptCurrentSelection()
 {
 	if (selection === undefined)
 	{
-		Log("no selection");
+		Log("no selection", LOG_WARNING);
 		return;
 	}
 	else
-		Log("script object " + selection.remote.name + "(" + selection.remote.kind + ")", 2);
+		Log("script object " + selection.remote.name + "(" + selection.remote.kind + ")", LOG_OK);
 	selection.remote.script = editor.getValue();
 	var target = selection;
 	var script = {};
@@ -2790,7 +2910,7 @@ function PlayCurrentSelection()
 		return;
 	}
 	else
-		Log("play object " + selection.remote.name + "(" + selection.remote.kind + ")", 2);
+		Log("play object " + selection.remote.name + "(" + selection.remote.kind + ")", LOG_OK);
 	selection.remote.playing = true;
 }
 
@@ -2802,7 +2922,7 @@ function StopCurrentSelection()
 		return;
 	}
 	else
-		Log("play object " + selection.remote.name + "(" + selection.remote.kind + ")", 2);
+		Log("stop object " + selection.remote.name + "(" + selection.remote.kind + ")", LOG_WARNING);
 	selection.remote.playing = false;
 }
 
@@ -2849,13 +2969,13 @@ function UpdateLocalObject(object)
 		{
 			//should playx
 			object.object3D.audio.play();
-			Log("audio play", 2);
+			Log("audio play", LOG_OK);
 		}
 		if (!object.remote.aplaying && object.object3D.audio.isPlaying)
 		{
 			//should stop
 			object.object3D.audio.stop();
-			Log("audio stop", 2);
+			Log("audio stop", LOG_WARNING);
 		}
 	}
 }
@@ -3000,7 +3120,7 @@ function OnDrop(ev)
 		  if (ev.dataTransfer.items[i].kind === 'file') 
 		  {
 			var file = ev.dataTransfer.items[i].getAsFile();
-			Log("dropped " + file.name, 2);
+			Log("dropped " + file.name, LOG_INFO);
 			console.log("file" , file);
 			//picking
 			mouse.x = ( ev.clientX / window.innerWidth ) * 2 - 1;
@@ -3972,3 +4092,21 @@ if (mode === 'vr')
 					renderer.render( scene, camera );
 					*/
 }
+
+function hashCode(str) { // java String#hashCode
+    var hash = 0;
+    for (var i = 0; i < str.length; i++) {
+       hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return hash;
+} 
+
+function intToRGB(i){
+    var c = (i & 0x00FFFFFF)
+        .toString(16)
+		.toUpperCase();
+		return "00000".substring(0, 6 - c.length) + c;
+}
+
+	
+		
