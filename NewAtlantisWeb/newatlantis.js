@@ -932,12 +932,85 @@ function animate() {
 				b.laststate = c;
 				gamepad_buttons[i] = b;
 			}
-	
+			
+			for (var i in gamepad_buttons)
+			{
+				var b = gamepad_buttons[i];
+				if (b.pressed)
+				{
+					Log("pressed: " + i);
+				}
 
+			}
+
+			//high speed
+			if (gamepad_buttons[5].pressed)
+			{
+				avatar_speed = 340;
+			}
+			else if (gamepad_buttons[5].released)
+			{
+				avatar_speed = 5;
+			}
+
+			//selection + drag
 			if (gamepad_buttons[0].pressed)
 			{
-				ActionCube();
+				raycaster.setFromCamera( new THREE.Vector2(0,0), camera );
+				var intersections = raycaster.intersectObjects( objects, true );
+				console.log("intersection=" , intersections);
+				//Log("dradding="+control.dragging);
+				if ( intersections.length > 0  && !control.dragging) 
+				{
+
+					SelectObject(intersections[0].object);
+					//console.log("selection set to:", selection);
+				}
+				else if (!control.dragging)
+				{
+					DeselectObject();
+				}
+				
 			}
+			else if (gamepad_buttons[0].released)
+			{
+
+				MouseDrag = false;
+				ObjectDrag = false;
+				if (object_selection !== undefined)
+				{
+					if (object_selection.material.emissive != undefined)
+						object_selection.material.emissive.set( 0x00000000 );
+					object_selection = undefined;
+				}
+			}
+
+			if (gamepad_buttons[1].pressed)
+			{
+				audioRecorder.startRecording();
+				Log("recording started...", LOG_ERROR);
+				
+			}
+			else if (gamepad_buttons[1].released)
+			{
+				audioRecorder.finishRecording();
+				Log("recording stopped...", LOG_WARNING);
+			}
+
+			
+
+
+
+
+
+
+
+			
+
+			/*if (gamepad_buttons[0].pressed)
+			{
+				ActionCube();
+			}*/
 			
 
 		}
@@ -2430,6 +2503,8 @@ function StartDSP()
 		//picking
 		mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
 		mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+
 		raycaster.setFromCamera( mouse, camera );
 
 		var intersections = raycaster.intersectObjects( objects, true );
@@ -2437,136 +2512,15 @@ function StartDSP()
 		//Log("dradding="+control.dragging);
 		if ( intersections.length > 0  && !control.dragging) 
 		{
-			var last_selection = selection;
-			object_selection = intersections[ 0 ].object;
-			inner_object_selection = object_selection;
-			var object_name = object_selection.name;
-			
-			//console.log(object_selection);
-			
-			selection = objects_main[object_selection.uuid];
-			
-			
-			//console.log("intersect with:",object_selection);
-			//console.log("selection:",selection);	
-			//get the first parent that is a NA object
-			while (selection === undefined || object_selection.parent == undefined)
-			{
-				object_selection = object_selection.parent;
-				selection = objects_main[object_selection.uuid];
-				//console.log("intersect with:",object_selection);
-				//console.log("selection:",selection);	
-			}
-			if (last_selection !== undefined && (last_selection.remote.kind === "sound" || last_selection.remote.kind === "resonator"))
-			{
-				last_selection.object3D.audio.setRolloffFactor(ROLL_OFF_FACTOR);
-			}
 
-			if (selection.remote.kind === "sound" || selection.remote.kind === "resonator")
-			{
-				//zoom effect
-				selection.object3D.audio.setRolloffFactor(0.5);
-			}
-			if (selection.remote.kind === "sound")
-			{
-				//Log("audio source selected!");
-				audio_object_selection = selection.object3D;
-				
-			}
-			Log("clicked on " + selection.remote.name + " :: " + object_name + " now selected!", LOG_OK);
-			if (parameters.editMode)
-			{
-				ObjectDrag = true;
-				if (selection !== undefined)
-				{
-					if (selection.remote.script !== undefined)
-					{
-						editor.setValue(selection.remote.script);
-					}
-					else
-						editor.setValue(na_library_default_script);
-					//Activate ?
-					if (last_selection === selection && selection.script !== undefined)
-					{
-						try
-						{
-							selection.script.onClick(object_name);
-						}
-						catch (exception)
-						{
-							Log(exception, LOG_ERROR);
-						}
-					}
-
-					if (last_selection === selection)
-					{
-						//change control mode
-						var mode = control.getMode();
-						if (mode === "translate")
-							control.setMode( "rotate" );
-						else if (mode === "rotate")
-							control.setMode( "scale" );
-						else if (mode === "scale")
-							control.setMode( "translate" );
-					}
-				}
-
-					
-				/*if (selection.remote.kind === "island")
-				{
-					//non draggable
-					object_selection = undefined;
-					selection = undefined;
-					ObjectDrag = false;
-					MouseDrag = true;
-				}
-				else*/
-				if (object_selection !== undefined)
-				{
-					if (object_selection.material.emissive != undefined)
-						object_selection.material.emissive.set( 0xaaaaaaaa );
-				}
-
-				if (selection !== undefined)
-				{
-					control.detach();
-					control.attach( object_selection);
-				}
-			}
-			else
-			{
-				//Activate ?
-				//object_selection.material.emissive.set( 0xcccccccc );
-				if (selection !== undefined && selection.script !== undefined)
-				{
-					try
-					{
-						selection.script.onClick(object_name);
-					}
-					catch (exception)
-					{
-						Log(exception, LOG_ERROR);
-					}
-				}
-				object_selection = undefined;
-				MouseDrag = true;
-			}
+			SelectObject(intersections[0].object);
+			
 			//console.log("selection set to:", selection);
 		}
 		else if (!control.dragging)
 		{
-			if (object_selection !== undefined)
-			{
-				if (object_selection.material.emissive != undefined)
-					object_selection.material.emissive.set( 0x00000000 );
-				object_selection = undefined;
-			}
-			control.detach();
-			MouseDrag = true;
-			if (selection !== undefined && (selection.remote.kind === "sound" || selection.remote.kind === "resonator"))
-			{
-				selection.object3D.audio.setRolloffFactor(ROLL_OFF_FACTOR);
-			}
+			
+			DeselectObject();
 		}
 		
 
@@ -2797,6 +2751,146 @@ postsRef.on('child_removed', function (snapshot) {
 });
 
 
+}
+
+
+
+
+function SelectObject(_object)
+{
+
+	var last_selection = selection;
+			object_selection = _object;
+			inner_object_selection = object_selection;
+			var object_name = object_selection.name;
+			
+			//console.log(object_selection);
+			
+			selection = objects_main[object_selection.uuid];
+			
+			
+			//console.log("intersect with:",object_selection);
+			//console.log("selection:",selection);	
+			//get the first parent that is a NA object
+			while (selection === undefined || object_selection.parent == undefined)
+			{
+				object_selection = object_selection.parent;
+				selection = objects_main[object_selection.uuid];
+				//console.log("intersect with:",object_selection);
+				//console.log("selection:",selection);	
+			}
+			if (last_selection !== undefined && (last_selection.remote.kind === "sound" || last_selection.remote.kind === "resonator"))
+			{
+				last_selection.object3D.audio.setRolloffFactor(ROLL_OFF_FACTOR);
+			}
+
+			if (selection.remote.kind === "sound" || selection.remote.kind === "resonator")
+			{
+				//zoom effect
+				selection.object3D.audio.setRolloffFactor(0.5);
+			}
+			if (selection.remote.kind === "sound")
+			{
+				//Log("audio source selected!");
+				audio_object_selection = selection.object3D;
+				
+			}
+			Log("clicked on " + selection.remote.name + " :: " + object_name + " now selected!", LOG_OK);
+			if (parameters.editMode)
+			{
+				ObjectDrag = true;
+				if (selection !== undefined)
+				{
+					if (selection.remote.script !== undefined)
+					{
+						editor.setValue(selection.remote.script);
+					}
+					else
+						editor.setValue(na_library_default_script);
+					//Activate ?
+					if (last_selection === selection && selection.script !== undefined)
+					{
+						try
+						{
+							selection.script.onClick(object_name);
+						}
+						catch (exception)
+						{
+							Log(exception, LOG_ERROR);
+						}
+					}
+
+					if (last_selection === selection)
+					{
+						//change control mode
+						var mode = control.getMode();
+						if (mode === "translate")
+							control.setMode( "rotate" );
+						else if (mode === "rotate")
+							control.setMode( "scale" );
+						else if (mode === "scale")
+							control.setMode( "translate" );
+					}
+				}
+
+					
+				/*if (selection.remote.kind === "island")
+				{
+					//non draggable
+					object_selection = undefined;
+					selection = undefined;
+					ObjectDrag = false;
+					MouseDrag = true;
+				}
+				else*/
+				if (object_selection !== undefined)
+				{
+					if (object_selection.material.emissive != undefined)
+						object_selection.material.emissive.set( 0xaaaaaaaa );
+				}
+
+				if (selection !== undefined)
+				{
+					control.detach();
+					control.attach( object_selection);
+				}
+			}
+			else
+			{
+				//Activate ?
+				//object_selection.material.emissive.set( 0xcccccccc );
+				if (selection !== undefined && selection.script !== undefined)
+				{
+					try
+					{
+						selection.script.onClick(object_name);
+					}
+					catch (exception)
+					{
+						Log(exception, LOG_ERROR);
+					}
+				}
+				object_selection = undefined;
+				MouseDrag = true;
+			}
+
+}
+
+function DeselectObject()
+{
+	//no results
+	if (object_selection !== undefined)
+	{
+		if (object_selection.material.emissive != undefined)
+			object_selection.material.emissive.set( 0x00000000 );
+		object_selection = undefined;
+	}
+	control.detach();
+	MouseDrag = true;
+	if (selection !== undefined && (selection.remote.kind === "sound" || selection.remote.kind === "resonator"))
+	{
+		selection.object3D.audio.setRolloffFactor(ROLL_OFF_FACTOR);
+	}
 }
 
 function StopDSP()
@@ -3406,7 +3500,10 @@ window.addEventListener("gamepadconnected", function( event ) {
 	GamepadCalibrate(event.gamepad);
 	gamepad_connected = true;
 	console.log("gamepadconnected", event.gamepad);
-	for (var i=0;i<4;++i)
+	Log(event.gamepad.id, LOG_INFO);
+	Log(event.gamepad.mapping, LOG_INFO);
+
+	for (var i=0;i<18;++i)
 	{
 		var b = {};
 		b.pressed = false;
