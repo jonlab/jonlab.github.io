@@ -846,12 +846,17 @@ var profiler6 = 0;
 
 function animate() 
 {
+	frame++;
+	if (mode !== 'vr')
+	{
+		if (frame%2!==0) //cap to 30 FPS
+			return;
+	}
 	var dt = clock.getDelta();
 	ProfilerStart();
 	//requestAnimationFrame(animate);
-	//frame++;
-	//if (frame%2!==0) //cap to 30 FPS
-	//return;
+	stats.begin();
+	//
 
 	if (command !== undefined)
 	{
@@ -866,7 +871,13 @@ function animate()
 		}
 	}
 
-	stats.begin();
+	//avatars aging
+	for (var i in avatars)
+	{
+		avatars[i].inactive += dt;
+	}
+
+	
 	var deadzone = 0.1;
 	//var dt = 1/60;
 
@@ -1420,6 +1431,10 @@ function createObject(o)
 	{	
 		geometry = new THREE.SphereBufferGeometry( 0.1, 12, 6);
 	}
+	else if (o.kind === "poi")
+	{
+		geometry = new THREE.PlaneBufferGeometry( 1, 1, 1, 1 );
+	}
 	else 
 	{
 		geometry = new THREE.SphereBufferGeometry(0.5,12,6);
@@ -1450,7 +1465,10 @@ function createObject(o)
 	}
 	
 
-	
+	if (o.kind === "poi")
+	{
+		material.wireframe = true;
+	}
 
 
 	cube = new THREE.Mesh(geometry, material);
@@ -1498,7 +1516,7 @@ function createObject(o)
 	var display_text = "";
 	//texte
 	//if (o.kind === "avatar")// || o.kind === "stream" || o.kind === "sound")
-	if (o.kind === "avatar" || o.kind === "resonator" || o.kind === "sound")
+	if (o.kind === "avatar" || o.kind === "resonator" || o.kind === "sound" || o.kind === "poi")
 	{
 		if (o.name !== undefined)
 		{
@@ -2663,12 +2681,17 @@ var objectsRef = firebase.database().ref('spaces/test/objects');
 objectsRef.on('child_changed', function (snapshot) {
 	var object = snapshot.val();
 	//console.log("changed", object);
-	var selectedObject = space_objects[object.id];//scene.getObjectByName(object.id);
-	selectedObject.remote = object;	
+	var selectedObject = space_objects[object.id];
+	selectedObject.remote = object;	//we update the remote part
 	if (selectedObject.object3D !== undefined)
 	{
 		UpdateLocalObject(selectedObject);
 	}
+	if (object.kind === "avatar")
+	{
+		avatars[object.id].inactive = 0;
+	}
+	
 	minimap_dirty = true;
 	network_activity++;
 });
@@ -2709,7 +2732,11 @@ objectsRef.on('child_added', function (snapshot) {
 	
 	if (object.kind === "avatar")
 	{
-		avatars.push(object.name);
+		var avatar = {};
+		avatar.name = object.name;
+		avatar.inactive = 0;
+		avatars[object.id] = avatar;
+		//avatars.push(avatar);
 		audio_notification.play();
 	}
 	minimap_dirty = true;
@@ -3323,7 +3350,7 @@ else if (arg === "whoishere")
 	var result = "";
 	for (var i in avatars)
 	{
-		result += avatars[i] + "\n";		
+		result += avatars[i].name + "\n";		
 		
 	}
 	Log(result, 0);
@@ -3581,7 +3608,15 @@ function UpdateMinimap()
 		*/
 
 		ctx_minimap.fillStyle = '#FFF';
-		ctx_minimap.fillText("mess:"+network_activity + " d:" + network_bytes+" o:" + objects.length, 0, 200 );
+		var avatar_active_count = 0;
+		for (var i in avatars)
+		{
+			if (avatars[i].inactive < 30)
+			{
+				avatar_active_count++;
+			}
+		}
+		ctx_minimap.fillText("mess:"+network_activity + " d:" + network_bytes+" o:" + objects.length + " a:"+ avatar_active_count, 0, 200 );
 	}
 }
 
