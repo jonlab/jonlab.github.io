@@ -951,7 +951,7 @@ function animate()
 				var b = gamepad_buttons[i];
 				if (b.pressed)
 				{
-					Log("pressed: " + i);
+					//Log("pressed: " + i);
 				}
 
 			}
@@ -971,7 +971,7 @@ function animate()
 			{
 				raycaster.setFromCamera( new THREE.Vector2(0,0), camera );
 				var intersections = raycaster.intersectObjects( objects, true );
-				console.log("intersection=" , intersections);
+				//console.log("intersection=" , intersections);
 				//Log("dradding="+control.dragging);
 				if ( intersections.length > 0  && !control.dragging) 
 				{
