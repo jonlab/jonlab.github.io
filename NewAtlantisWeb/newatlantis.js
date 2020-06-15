@@ -2677,7 +2677,7 @@ objectsRef.on('child_changed', function (snapshot) {
 
 objectsRef.on('child_added', function (snapshot) {
 	var object = snapshot.val();
-	console.log("added", object);
+	//console.log("added", object);
 	var newobj = {};
 	newobj.remote = object;
 	space_objects[object.id] = newobj;
