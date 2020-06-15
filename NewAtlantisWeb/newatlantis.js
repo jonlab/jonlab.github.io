@@ -15,8 +15,8 @@ const LOG_WARNING = 2;
 const LOG_ERROR = 3;
 const LOG_CHAT = 4;
 
-const ROLL_OFF_FACTOR = 1.7;
-const ROLL_OFF_FACTOR_SPACE = 1.2;
+const ROLL_OFF_FACTOR = 1.6;
+const ROLL_OFF_FACTOR_SPACE = 1;
 
 
 /**
@@ -65,7 +65,7 @@ var main_timer = 0;
 var send_timer = 0;
 var avatar_dirty = false;
 var avatar_speed = 5;
-
+var clock = new THREE.Clock();
 var space_objects = [];  //overall objects
 var objects = []; //THREE objects
 var objects_main = [];
@@ -844,7 +844,9 @@ var profiler5 = 0;
 var profiler6 = 0;
 
 
-function animate() {
+function animate() 
+{
+	var dt = clock.getDelta();
 	ProfilerStart();
 	//requestAnimationFrame(animate);
 	//frame++;
@@ -866,7 +868,7 @@ function animate() {
 
 	stats.begin();
 	var deadzone = 0.1;
-	var dt = 1/60;
+	//var dt = 1/60;
 
 	if (gamepad_connected)
 	{
@@ -989,7 +991,6 @@ function animate() {
 			{
 				audioRecorder.startRecording();
 				Log("recording started...", LOG_ERROR);
-				
 			}
 			else if (gamepad_buttons[1].released)
 			{
@@ -997,7 +998,14 @@ function animate() {
 				Log("recording stopped...", LOG_WARNING);
 			}
 
+			//start/stop current selection audio source
+			if (gamepad_buttons[2].pressed)
+			{
+				//start stop
+				ToggleSelectionAudioPlaying();
+			}
 			
+
 
 
 
@@ -1160,7 +1168,7 @@ function animate() {
 			try
 			{
 				if (target.script !== undefined)
-					target.script.update();
+					target.script.update(dt);
 			}
 			catch (exception)
 			{
@@ -1951,7 +1959,7 @@ function uploadAudioFile(file, worldposition)
 	fileRef.put(file).then(function(snapshot) 
 	{
 		console.log('Uploaded a blob or file! ');			
-		var obj= getNewObjectCommand("sound");
+		var obj = getNewObjectCommand("sound");
 		if (worldposition !== undefined)
 		{
 			obj.x = worldposition.x;
@@ -1960,10 +1968,16 @@ function uploadAudioFile(file, worldposition)
 		}
 		fileRef.getDownloadURL().then(function(url) {
 			obj.url = url;
+			if (file.name === undefined)
+			{
+				file.name = "recording";
+			}
 			obj.name = file.name;
+			console.log("creating new object: ", obj);
 			firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
 		}).catch(function(error) {
 			// Handle any errors
+			Log(error, LOG_ERROR);
 		  });
 		  
 		
@@ -2040,6 +2054,25 @@ function UpdateSelection()
 		firebase.database().ref('spaces/test/objects/' + selection.remote.id).set(selection.remote);
 	}
 	*/
+}
+
+
+function ToggleSelectionAudioPlaying()
+{
+	if (selection !== undefined)
+	{
+		if (selection.remote.aplaying === false)
+		{
+			//Log("space play");
+			selection.remote.aplaying = true;
+		}
+		else
+		{
+			//Log("space stop");
+			selection.remote.aplaying = false;
+		}
+		UpdateRemoteObject(selection);
+	}
 }
 
 
@@ -2245,10 +2278,10 @@ if (navigator.mediaDevices)
 
 		audioRecorder = new WebAudioRecorder(sourceNode, {
 			workerDir: "js/",     // must end with slash
-			encoding: "wav",
+			encoding: "mp3",
 			channels: 1,
-			timeLimit: 10,
-			encodeAfterRecord: true
+			timeLimit: 20,
+			encodeAfterRecord: false
 			});
 
 		audioRecorder.onComplete = function(recorder, blob) 
@@ -2263,6 +2296,7 @@ if (navigator.mediaDevices)
 			spawn_position = raycaster.ray.origin.clone();
 			spawn_position.addScaledVector(raycaster.ray.direction, 5);
 			//we upload the audio content in NA
+			blob.name = "recording";
 			uploadAudioFile(blob, spawn_position);
 		};
 	})
@@ -2601,21 +2635,7 @@ function StartDSP()
 			case 32: //space
 			if (!(document.activeElement === chat_input))
 			{
-				if (selection !== undefined)
-				{
-					if (selection.remote.aplaying === false)
-					{
-						//Log("space play");
-						selection.remote.aplaying = true;
-					}
-					else
-					{
-						//Log("space stop");
-						selection.remote.aplaying = false;
-					}
-					UpdateRemoteObject(selection);
-
-				}
+				ToggleSelectionAudioPlaying();
 			}
 			break;
 			case 13: //enter
@@ -2657,7 +2677,7 @@ objectsRef.on('child_changed', function (snapshot) {
 
 objectsRef.on('child_added', function (snapshot) {
 	var object = snapshot.val();
-	//console.log("added", object);
+	console.log("added", object);
 	var newobj = {};
 	newobj.remote = object;
 	space_objects[object.id] = newobj;
