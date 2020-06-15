@@ -2938,6 +2938,7 @@ function DeselectObject()
 	{
 		selection.object3D.audio.setRolloffFactor(ROLL_OFF_FACTOR);
 	}
+	editor.setValue("");
 }
 
 function StopDSP()
@@ -3021,6 +3022,7 @@ function DeleteCurrentSelection()
 	selection = undefined;
 	object_selection = undefined;
 	ObjectDrag = false;
+	editor.setValue("");
 }
 
 
@@ -3059,6 +3061,13 @@ function RunScriptOnTarget(target)
 		target.object3D.scale.x = val;
 		target.object3D.scale.y = val;
 		target.object3D.scale.z = val;	
+	};
+
+	script.move = function(x,y,z)
+	{
+		target.object3D.position.x += x;
+		target.object3D.position.y += y;
+		target.object3D.position.z += z;
 	};
 
 	//eval.call(target.remote.script, script); //using eval
