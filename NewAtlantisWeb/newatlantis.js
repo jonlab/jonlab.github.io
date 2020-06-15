@@ -114,6 +114,7 @@ var loading_threshold = 500;
 
 var spawning_point="";
 
+var dt = 0; //current delta time
 var audio_notification = new Audio("sounds/poc.wav");
 audio_notification.loop = false;
 //VR
@@ -852,7 +853,7 @@ function animate()
 		if (frame%2!==0) //cap to 30 FPS
 			return;
 	}
-	var dt = clock.getDelta();
+	dt = clock.getDelta();
 	ProfilerStart();
 	//requestAnimationFrame(animate);
 	stats.begin();
@@ -1148,15 +1149,14 @@ function animate()
 				//scripting
 				if (target.remote.playing)
 				{
-					var script = {};
-					script.target = target;
-					//eval.call(target.remote.script, script); //using eval
-					//eval(target.remote.script); //using eval
-					var result = function(str){
-						return eval(str);
-					}.call(script,target.remote.script);
 
-					target.script = script;
+					
+					var script = RunScriptOnTarget(target);
+					target.script = script; //script become active
+
+					
+
+					
 				}
 			}
 			else if (dist2 > loading_hysteresis2 && target.active)
@@ -3035,13 +3035,41 @@ function ScriptCurrentSelection()
 		Log("script object " + selection.remote.name + "(" + selection.remote.kind + ")", LOG_OK);
 	selection.remote.script = editor.getValue();
 	var target = selection;
-	var script = {};
-	script.target = target;
-	var result = function(str){
-		return eval(str);
-	  }.call(script,selection.remote.script);
+	var script = RunScriptOnTarget(target);
 	selection.script = script;
 }
+
+
+function RunScriptOnTarget(target)
+{
+	var script = {};
+	script.target = target;
+	script.timer = 0;
+	script.animateScale = function(min, max, speed)
+	{
+		//min = min | 0;
+		//max = max | 2;
+		//speed = speed | 1;
+		//Log("dt: " + dt);
+		//Log("dt: " + dt);
+		script.timer += dt;
+		//Log("timer: " + script.timer);
+		var sin = Math.sin(script.timer*Math.PI*2*speed);
+		var val = min+(max-min)*((sin+1)/2);
+		target.object3D.scale.x = val;
+		target.object3D.scale.y = val;
+		target.object3D.scale.z = val;	
+	};
+
+	//eval.call(target.remote.script, script); //using eval
+	//eval(target.remote.script); //using eval
+	var result = function(str){
+		return eval(str);
+	}.call(script,target.remote.script);
+
+	return script;		
+}
+
 
 function PlayCurrentSelection()
 {
@@ -3212,8 +3240,8 @@ function CreateGUI()
 	//gui.add(parameters, 'destroyAll');
 	gui.add(parameters, 'position').listen();
 
-	gui.add(parameters, "poi", na_pois);
-	gui.add(parameters, "teleport");
+	//gui.add(parameters, "poi", na_pois);
+	//gui.add(parameters, "teleport");
 
 	
 	
