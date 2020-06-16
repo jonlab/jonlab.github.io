@@ -6,6 +6,17 @@ import { CannonPhysics } from './examples/jsm/physics/CannonPhysics.js';
 import { TransformControls } from './examples/jsm/controls/TransformControls.js';
 import { VRButton } from './examples/jsm/webxr/VRButton.js';
 import { XRControllerModelFactory } from './examples/jsm/webxr/XRControllerModelFactory.js';
+import { EffectComposer } from './examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from './examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from './examples/jsm/postprocessing/ShaderPass.js';
+import { GlitchPass } from './examples/jsm/postprocessing/GlitchPass.js';
+import { RGBShiftShader } from './examples/jsm/shaders/RGBShiftShader.js';
+import { DotScreenShader } from './examples/jsm/shaders/DotScreenShader.js';
+import { UnrealBloomPass } from './examples/jsm/postprocessing/UnrealBloomPass.js';
+import { HalftonePass } from './examples/jsm/postprocessing/HalftonePass.js';
+import { OutlinePass } from './examples/jsm/postprocessing/OutlinePass.js';
+import { LuminosityShader } from './examples/jsm/shaders/LuminosityShader.js';
+import { SobelOperatorShader } from './examples/jsm/shaders/SobelOperatorShader.js';
 
 const PhysicsEnabled = false;
 
@@ -56,6 +67,7 @@ var freesound_list;
 var scene; //Three js 3D scene
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
+var composer;
 var cursor;
 var selfie;
 var physics;
@@ -553,6 +565,53 @@ scene.add( control );
 fogColor = new THREE.Color(0x001133);
 
 
+if (mode === "fx")
+{
+	composer = new EffectComposer( renderer );
+	var renderPass = new RenderPass( scene, camera );
+	composer.addPass( renderPass );
+
+	var effectGrayScale = new ShaderPass( LuminosityShader );
+	composer.addPass( effectGrayScale );
+
+	// you might want to use a gaussian blur filter before
+	// the next pass to improve the result of the Sobel operator
+
+	// Sobel operator
+
+	
+	var effectSobel = new ShaderPass( SobelOperatorShader );
+	effectSobel.uniforms[ 'resolution' ].value.x = window.innerWidth * window.devicePixelRatio;
+	effectSobel.uniforms[ 'resolution' ].value.y = window.innerHeight * window.devicePixelRatio;
+	composer.addPass( effectSobel );
+	
+	
+	//var glitchPass = new GlitchPass();
+	//composer.addPass( glitchPass );
+	//console.log(glitchPass);
+	//glitchPass.enabled = false;
+	//var halftonePass = new HalftonePass();
+	//composer.addPass( halftonePass );
+
+	//var outlinePass = new OutlinePass(new THREE.Vector2( window.innerWidth, window.innerHeight ), scene, camera);
+	//composer.addPass( outlinePass );
+
+	
+
+	//var bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
+	//composer.addPass( bloomPass );
+
+	//var effect = new ShaderPass( DotScreenShader );
+	//effect.uniforms[ 'scale' ].value = 8; //4
+	//composer.addPass( effect );
+
+	/*var effect = new ShaderPass( RGBShiftShader );
+	effect.uniforms[ 'amount' ].value = 0.0015;
+	composer.addPass( effect );
+	*/
+	
+	
+}
 
 //scene.background = fogColor;
 //scene.fog = new THREE.Fog(fogColor, 0.0025, 20);
@@ -699,6 +758,7 @@ water = new Water(
 		fog: scene.fog !== undefined
 	}
 );
+PatchMaterial(water.material);
 water.material.uniforms.size.value = 4;
 console.log(water.material.uniforms.size.value);
 water.rotation.x = - Math.PI / 2;
@@ -709,6 +769,7 @@ if (PhysicsEnabled)
 
 // Skybox
 sky = new Sky();
+PatchMaterial(sky.material);
 var uniforms = sky.material.uniforms;
 uniforms[ 'turbidity' ].value = 10;
 uniforms[ 'rayleigh' ].value = 2;
@@ -1323,7 +1384,15 @@ function animate()
 	profiler4 = ProfilerStop();
 	ProfilerStart();
 	//console.log("end");
-	renderer.render(scene, camera);
+
+	if (mode === "fx")
+	{
+		composer.render(scene, camera);
+	}
+	else
+	{
+		renderer.render(scene, camera);
+	}
 	profiler5 = ProfilerStop();
 	ProfilerStart();
 	UpdateLog();
@@ -1504,6 +1573,7 @@ function createObject(o)
 		material.color.b = o.b;
 	}
 
+	PatchMaterial(material);
 	if (o.kind !== "box" && o.kind !== "resonator")
 	{
 		cube.castShadow = true;
@@ -1848,6 +1918,9 @@ function createObject(o)
 			{
 				//gltf.scene.scale.set(0.01,0.01,0.01);
 				cube.add( gltf.scene);
+				RecursivePatchMaterial(gltf.scene);
+				//console.log(gltf.scene);
+				
 			}, undefined, function ( error ) {
 				console.error( error );
 			} );
@@ -1868,8 +1941,22 @@ function createObject(o)
 
 
 
-
-
+function PatchMaterial(material)
+{
+	//material.wireframe = true;
+	//material.color = new THREE.Color(1,1,1,1);
+}
+function RecursivePatchMaterial(_obj)
+{
+	for (var i in _obj.children)
+	{
+		RecursivePatchMaterial(_obj.children[i]);
+	}
+	if (_obj.material !== undefined)
+	{
+		PatchMaterial(_obj.material);
+	}
+}
 
 
 
@@ -2782,9 +2869,10 @@ postsRef.on('child_changed', function (snapshot) {
 postsRef.on('child_added', function (snapshot) {
 	var object = snapshot.val();
 	//console.log("posts added", object);
-	//var line = object.who + ": " + object.text;
+	
 	//console.log("post : " + line);
 	Chat(object.who, object.text);
+	var line = object.who + ": " + object.text;
 	posts.push(line);
 	audio_notification.play();
 	
@@ -3388,10 +3476,17 @@ else if (arg === "whoishere")
 	for (var i in avatars)
 	{
 		result += avatars[i].name + "\n";		
-		
 	}
 	Log(result, 0);
 	console.log(result);
+	return;
+}
+else if (arg === "hide")
+{
+	gui.hide();
+	ctx.canvas.style.display = "none";
+	ctx_minimap.canvas.style.display = "none";
+
 	return;
 }
 else if (arg === "stats")
@@ -4120,6 +4215,7 @@ if (mode === 'vr')
 	var planeSimpleSea = new THREE.Mesh(geometrySimpleSea, materialSimpleSea);
 	planeSimpleSea.rotation.setFromVector3(new THREE.Vector3(-Math.PI / 2, 0, 0));
 	scene.add(planeSimpleSea);
+	PatchMaterial(materialSimpleSea);
 
 
 
