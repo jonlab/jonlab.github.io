@@ -17,6 +17,7 @@ import { HalftonePass } from './examples/jsm/postprocessing/HalftonePass.js';
 import { OutlinePass } from './examples/jsm/postprocessing/OutlinePass.js';
 import { LuminosityShader } from './examples/jsm/shaders/LuminosityShader.js';
 import { SobelOperatorShader } from './examples/jsm/shaders/SobelOperatorShader.js';
+import { InvertShader } from './shaders/InvertShader.js';
 
 const PhysicsEnabled = false;
 
@@ -58,6 +59,7 @@ var network_bytes = 0;
 var frame = 0;
 var midi = null;  // global MIDIAccess object
 
+var postprocess = {};
 //freesound API
 var baseurl_freesoundsearch = "https://freesound.org/apiv2/search/text/?token=IcsqGmC1CiYHNtyWpZ4ETJFHb8OM5QhzZYb3AzGj&fields=previews,description,name,duration&filter=duration:[0 TO 60]&query=";
 var controller_freesound;
@@ -571,8 +573,8 @@ if (mode === "fx")
 	var renderPass = new RenderPass( scene, camera );
 	composer.addPass( renderPass );
 
-	var effectGrayScale = new ShaderPass( LuminosityShader );
-	composer.addPass( effectGrayScale );
+	postprocess.effectGrayScale = new ShaderPass( LuminosityShader );
+	composer.addPass( postprocess.effectGrayScale );
 
 	// you might want to use a gaussian blur filter before
 	// the next pass to improve the result of the Sobel operator
@@ -580,19 +582,28 @@ if (mode === "fx")
 	// Sobel operator
 
 	
-	var effectSobel = new ShaderPass( SobelOperatorShader );
-	effectSobel.uniforms[ 'resolution' ].value.x = window.innerWidth * window.devicePixelRatio;
-	effectSobel.uniforms[ 'resolution' ].value.y = window.innerHeight * window.devicePixelRatio;
-	composer.addPass( effectSobel );
+	postprocess.effectSobel = new ShaderPass( SobelOperatorShader );
+	postprocess.effectSobel.uniforms[ 'resolution' ].value.x = window.innerWidth * window.devicePixelRatio;
+	postprocess.effectSobel.uniforms[ 'resolution' ].value.y = window.innerHeight * window.devicePixelRatio;
+	composer.addPass( postprocess.effectSobel );
+	postprocess.effectSobel.enabled =  false;
+
+
+	postprocess.invertShader = new ShaderPass( InvertShader );
+	composer.addPass( postprocess.invertShader );
+	postprocess.invertShader.enabled =  false;
+
+	postprocess.glitchPass = new GlitchPass();
+	composer.addPass( postprocess.glitchPass );
+	postprocess.glitchPass.enabled =  false;
 	
-	
-	//var glitchPass = new GlitchPass();
-	//composer.addPass( glitchPass );
 	//console.log(glitchPass);
 	//glitchPass.enabled = false;
-	//var halftonePass = new HalftonePass();
-	//composer.addPass( halftonePass );
+	postprocess.halftonePass = new HalftonePass();
+	composer.addPass( postprocess.halftonePass );
+	postprocess.halftonePass.enabled = false;
 
+	
 	//var outlinePass = new OutlinePass(new THREE.Vector2( window.innerWidth, window.innerHeight ), scene, camera);
 	//composer.addPass( outlinePass );
 
@@ -3479,6 +3490,43 @@ else if (arg === "whoishere")
 	}
 	Log(result, 0);
 	console.log(result);
+	return;
+}
+/*
+	
+	postprocess.effectSobel
+	postprocess.invertShader
+	postprocess.glitchPass
+	postprocess.halftonePass
+	*/
+else if (arg === "grayscale")
+{
+	postprocess.effectGrayScale.enabled = !postprocess.effectGrayScale.enabled;
+	Log("grayscale is " + postprocess.effectGrayScale.enabled);
+	return;
+}
+else if (arg === "sobel")
+{
+	postprocess.effectSobel.enabled = !postprocess.effectSobel.enabled;
+	Log("sobel is " + postprocess.effectSobel.enabled);
+	return;
+}
+else if (arg === "invert")
+{
+	postprocess.invertShader.enabled = !postprocess.invertShader.enabled;
+	Log("invert is " + postprocess.invertShader.enabled);
+	return;
+}
+else if (arg === "glitch")
+{
+	postprocess.glitchPass.enabled = !postprocess.glitchPass.enabled;
+	Log("glitch is " + postprocess.glitchPass.enabled);
+	return;
+}
+else if (arg === "halftone")
+{
+	postprocess.halftonePass.enabled = !postprocess.halftonePass.enabled;
+	Log("halftone is " + postprocess.halftonePass.enabled);
 	return;
 }
 else if (arg === "hide")
