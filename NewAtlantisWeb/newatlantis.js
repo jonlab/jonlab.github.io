@@ -567,7 +567,7 @@ scene.add( control );
 fogColor = new THREE.Color(0x001133);
 
 
-if (mode === "fx")
+if (mode !== "normal")
 {
 	composer = new EffectComposer( renderer );
 	var renderPass = new RenderPass( scene, camera );
@@ -575,23 +575,16 @@ if (mode === "fx")
 
 	postprocess.effectGrayScale = new ShaderPass( LuminosityShader );
 	composer.addPass( postprocess.effectGrayScale );
-
-	// you might want to use a gaussian blur filter before
-	// the next pass to improve the result of the Sobel operator
-
-	// Sobel operator
-
 	
 	postprocess.effectSobel = new ShaderPass( SobelOperatorShader );
 	postprocess.effectSobel.uniforms[ 'resolution' ].value.x = window.innerWidth * window.devicePixelRatio;
 	postprocess.effectSobel.uniforms[ 'resolution' ].value.y = window.innerHeight * window.devicePixelRatio;
 	composer.addPass( postprocess.effectSobel );
-	postprocess.effectSobel.enabled =  false;
-
+	postprocess.effectSobel.enabled =  true;
 
 	postprocess.invertShader = new ShaderPass( InvertShader );
 	composer.addPass( postprocess.invertShader );
-	postprocess.invertShader.enabled =  false;
+	postprocess.invertShader.enabled =  true;
 
 	postprocess.glitchPass = new GlitchPass();
 	composer.addPass( postprocess.glitchPass );
@@ -603,23 +596,23 @@ if (mode === "fx")
 	composer.addPass( postprocess.halftonePass );
 	postprocess.halftonePass.enabled = false;
 
-	
+
 	//var outlinePass = new OutlinePass(new THREE.Vector2( window.innerWidth, window.innerHeight ), scene, camera);
 	//composer.addPass( outlinePass );
-
-	
 
 	//var bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
 	//composer.addPass( bloomPass );
 
-	//var effect = new ShaderPass( DotScreenShader );
-	//effect.uniforms[ 'scale' ].value = 8; //4
-	//composer.addPass( effect );
+	postprocess.dotScreenShader = new ShaderPass( DotScreenShader );
+	postprocess.dotScreenShader.uniforms[ 'scale' ].value = 8; 
+	composer.addPass( postprocess.dotScreenShader );
+	postprocess.dotScreenShader.enabled = false;
 
-	/*var effect = new ShaderPass( RGBShiftShader );
-	effect.uniforms[ 'amount' ].value = 0.0015;
-	composer.addPass( effect );
-	*/
+	postprocess.rgbShiftShader = new ShaderPass( RGBShiftShader );
+	postprocess.rgbShiftShader.uniforms[ 'amount' ].value = 0.0015;
+	composer.addPass( postprocess.rgbShiftShader );
+	postprocess.rgbShiftShader.enabled = false;
+	
 	
 	
 }
@@ -756,8 +749,8 @@ var waterGeometry = new THREE.PlaneBufferGeometry( 10000, 10000 );
 water = new Water(
 	waterGeometry,
 	{
-		textureWidth: 512,
-		textureHeight: 512,
+		textureWidth: 256,
+		textureHeight: 256,
 		waterNormals: new THREE.TextureLoader().load( 'textures/waternormals.jpg', function ( texture ) {
 			texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
 		} ),
@@ -920,11 +913,11 @@ var profiler6 = 0;
 function animate() 
 {
 	frame++;
-	if (mode !== 'vr')
+	/*if (mode !== 'vr')
 	{
 		if (frame%2!==0) //cap to 30 FPS
 			return;
-	}
+	}*/
 	dt = clock.getDelta();
 	ProfilerStart();
 	//requestAnimationFrame(animate);
@@ -1396,13 +1389,14 @@ function animate()
 	ProfilerStart();
 	//console.log("end");
 
-	if (mode === "fx")
+	
+	if (mode === "normal")
 	{
-		composer.render(scene, camera);
+		renderer.render(scene, camera);
 	}
 	else
 	{
-		renderer.render(scene, camera);
+		composer.render(scene, camera);
 	}
 	profiler5 = ProfilerStop();
 	ProfilerStart();
@@ -3492,13 +3486,7 @@ else if (arg === "whoishere")
 	console.log(result);
 	return;
 }
-/*
-	
-	postprocess.effectSobel
-	postprocess.invertShader
-	postprocess.glitchPass
-	postprocess.halftonePass
-	*/
+
 else if (arg === "grayscale")
 {
 	postprocess.effectGrayScale.enabled = !postprocess.effectGrayScale.enabled;
@@ -3529,6 +3517,21 @@ else if (arg === "halftone")
 	Log("halftone is " + postprocess.halftonePass.enabled);
 	return;
 }
+
+else if (arg === "dotscreen")
+{
+	postprocess.dotScreenShader.enabled = !postprocess.dotScreenShader.enabled;
+	Log("dotscreen is " + postprocess.dotScreenShader.enabled);
+	return;
+}
+else if (arg === "rgbshift")
+{
+	postprocess.rgbShiftShader.enabled = !postprocess.rgbShiftShader.enabled;
+	Log("rgbshift is " + postprocess.rgbShiftShader.enabled);
+	return;
+}
+
+
 else if (arg === "hide")
 {
 	gui.hide();
