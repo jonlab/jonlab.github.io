@@ -3260,6 +3260,17 @@ function UpdateLocalCamera(object)
 	camera.rotation.x = object.remote.rotation.x;
 	camera.rotation.y = object.remote.rotation.y;
 	camera.rotation.z = object.remote.rotation.z;
+
+	//restore up
+	var cam_direction = new THREE.Vector3(0,0,0);
+	camera.getWorldDirection(cam_direction);
+	var cam_position = new THREE.Vector3(0,0,0);
+	camera.getWorldPosition(cam_position);
+	
+	cam_direction.add(cam_position);
+	camera.lookAt(cam_direction);
+	
+
 }
 
 
@@ -3537,6 +3548,7 @@ else if (arg === "hide")
 	gui.hide();
 	ctx.canvas.style.display = "none";
 	ctx_minimap.canvas.style.display = "none";
+	//elSelfie.style.display = "none";
 
 	return;
 }
