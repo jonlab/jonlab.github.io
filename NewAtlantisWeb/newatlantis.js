@@ -580,11 +580,11 @@ if (mode !== "normal")
 	postprocess.effectSobel.uniforms[ 'resolution' ].value.x = window.innerWidth * window.devicePixelRatio;
 	postprocess.effectSobel.uniforms[ 'resolution' ].value.y = window.innerHeight * window.devicePixelRatio;
 	composer.addPass( postprocess.effectSobel );
-	postprocess.effectSobel.enabled =  true;
+	postprocess.effectSobel.enabled =  false;
 
 	postprocess.invertShader = new ShaderPass( InvertShader );
 	composer.addPass( postprocess.invertShader );
-	postprocess.invertShader.enabled =  true;
+	postprocess.invertShader.enabled =  false;
 
 	postprocess.glitchPass = new GlitchPass();
 	composer.addPass( postprocess.glitchPass );
@@ -3928,8 +3928,6 @@ function Clap(space_object, source_pos, listener_pos)
 
 		//AddLine(listener_pos, projection);
 		//AddLine(listener_pos, projection);
-
-
 
 		var result = raycaster.intersectObjects( spaces, true);
 		//console.log("result len=" + result.length);
