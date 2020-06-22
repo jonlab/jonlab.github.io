@@ -1666,7 +1666,7 @@ function createObject(o)
 		{
 			Log("read pd patch...", LOG_INFO);
 			//console.log("read pd patch:", o.pd);
-			patch = Pd.loadPatch(o.pd);
+			/*patch = Pd.loadPatch(o.pd);
 			//Pd.start();
 			//console.log("loaded patch:", patch);
 			var out = patch.o(0);
@@ -1678,6 +1678,7 @@ function createObject(o)
 			{
 				sound.setNodeSource(patch.o(0).getOutNode());
 			}
+			*/
 		}
 		catch (exception)
 		{
