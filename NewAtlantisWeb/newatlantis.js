@@ -19,6 +19,17 @@ import { LuminosityShader } from './examples/jsm/shaders/LuminosityShader.js';
 import { SobelOperatorShader } from './examples/jsm/shaders/SobelOperatorShader.js';
 import { InvertShader } from './shaders/InvertShader.js';
 
+/*
+class NewAtlantisPluginBase
+{
+    constructor(_NA) 
+    {
+        this.NA = _NA;
+    }
+}
+*/
+
+
 const PhysicsEnabled = false;
 
 const LOG_INFO = 0;
@@ -28,6 +39,7 @@ const LOG_ERROR = 3;
 const LOG_CHAT = 4;
 
 const ROLL_OFF_FACTOR = 1.6;
+const ROLL_OFF_FACTOR_ZOOM = 1.0;
 const ROLL_OFF_FACTOR_SPACE = 1;
 
 
@@ -58,6 +70,8 @@ var network_bytes = 0;
 
 var frame = 0;
 var midi = null;  // global MIDIAccess object
+
+var NA = {};
 
 var postprocess = {};
 //freesound API
@@ -104,7 +118,8 @@ var parameters; //backpack
 var inputFile;
 var fogColor;
 
-var audioRecorder;
+var audioRecorder; 
+
 var vec = new THREE.Vector3();
 var dir = new THREE.Vector3();
 var euler = new THREE.Euler(0, 0, 0, 'YXZ');
@@ -909,7 +924,7 @@ var profiler4 = 0;
 var profiler5 = 0;
 var profiler6 = 0;
 
-
+//main loop
 function animate() 
 {
 	frame++;
@@ -1101,6 +1116,7 @@ function animate()
 		}
 	}
 	
+	//plugin.update(dt);
 
 	profiler0 = ProfilerStop();
 	ProfilerStart();
@@ -2058,7 +2074,6 @@ function openFile(event) {
 
 function uploadAudioFile(file, worldposition)
 {
-	
 	var storage = firebase.storage();
 	var storageRef = storage.ref(); // Create a storage reference from our storage service
 	var audioRef = storageRef.child('audiofiles');
@@ -2794,6 +2809,11 @@ objectsRef.on('child_added', function (snapshot) {
 	var object = snapshot.val();
 	//console.log("added", object);
 	var newobj = {};
+	if (object.name === undefined)
+	{
+		object.name = object.kind;
+		
+	}
 	newobj.remote = object;
 	space_objects[object.id] = newobj;
 	if (object.id === avatarname)
@@ -2804,6 +2824,7 @@ objectsRef.on('child_added', function (snapshot) {
 			UpdateLocalCamera(newobj); //this avatar, we update camera with the last known position
 		}
 	}
+	
 	if (spawning_point === object.name)
 	{
 		
@@ -2927,7 +2948,7 @@ function SelectObject(_object)
 			if (selection.remote.kind === "sound" || selection.remote.kind === "resonator")
 			{
 				//zoom effect
-				selection.object3D.audio.setRolloffFactor(0.5);
+				selection.object3D.audio.setRolloffFactor(ROLL_OFF_FACTOR_ZOOM);
 			}
 			if (selection.remote.kind === "sound")
 			{
@@ -2936,8 +2957,10 @@ function SelectObject(_object)
 				
 			}
 			Log("clicked on " + selection.remote.name + " :: " + object_name + " now selected!", LOG_OK);
-			if (parameters.editMode)
+
+			if (parameters.editMode && (!selection.remote.locked || selection.remote.locked === undefined))
 			{
+				//Log("ObjectDrag locked=" + selection.remote.locked);
 				ObjectDrag = true;
 				if (selection !== undefined)
 				{
@@ -3109,13 +3132,16 @@ function ActionBox(fx)
 
 function DeleteCurrentSelection()
 {
-	control.detach();
-	Log("delete object " + selection.remote.name + "(" + selection.remote.kind + ")", LOG_WARNING);
-	firebase.database().ref('spaces/test/objects/' + selection.remote.id).remove();
-	selection = undefined;
-	object_selection = undefined;
-	ObjectDrag = false;
-	editor.setValue("");
+	if (!selection.remote.locked)
+	{
+		control.detach();
+		Log("delete object " + selection.remote.name + "(" + selection.remote.kind + ")", LOG_WARNING);
+		firebase.database().ref('spaces/test/objects/' + selection.remote.id).remove();
+		selection = undefined;
+		object_selection = undefined;
+		ObjectDrag = false;
+		editor.setValue("");
+	}
 }
 
 
@@ -3269,7 +3295,6 @@ function UpdateLocalCamera(object)
 	
 	cam_direction.add(cam_position);
 	camera.lookAt(cam_direction);
-	
 
 }
 
@@ -3467,6 +3492,9 @@ function OnDragOver(ev)
 
 function OnChat(arg)
 {
+	//var result = plugin.command(arg);
+	//if (result)
+	//	return;
 if (arg === "clear")
 {
 	firebase.database().ref('posts').set([]);
@@ -3619,6 +3647,52 @@ else if (arg.startsWith("stop"))
 		//Log("audio stopped!", 2);
 		target.remote.aplaying = false;
 		UpdateRemoteObject(target);
+	}
+	return;
+}
+else if (arg.startsWith("lock"))
+{
+	if (selection !== undefined)
+	{
+		selection.remote.locked = true;
+		UpdateRemoteObject(selection);
+		DeselectObject();
+		MouseDrag = false;
+		Log(selection.remote.name + " locked!", LOG_WARNING);
+	}
+	else
+	{
+		Log("no selection to lock!", LOG_ERROR);
+	}
+	return;
+}
+else if (arg.startsWith("unlock"))
+{
+	if (selection !== undefined)
+	{
+		selection.remote.locked = false;
+		UpdateRemoteObject(selection);
+		Log(selection.remote.name + " unlocked!", LOG_OK);
+	}
+	else
+	{
+		Log("no selection to unlock!", LOG_ERROR);
+	}
+	return;
+}
+else if (arg.startsWith("rename"))
+{
+	if (selection !== undefined)
+	{
+		var res = arg.split(' ');
+		var name = res[1];
+		selection.remote.name = name;
+		UpdateRemoteObject(selection);
+		Log("selection renamed to " + name, LOG_OK);
+	}
+	else
+	{
+		Log("no selection to rename!", LOG_ERROR);
 	}
 	return;
 }
@@ -4499,5 +4573,8 @@ function intToRGB(i){
 		return "00000".substring(0, 6 - c.length) + c;
 }
 
-	
-		
+//API
+NA.Log = Log;
+
+var plugin = new NewAtlantisPluginTest(NA);
+//plugin_example.setBackend(NA);
