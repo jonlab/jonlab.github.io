@@ -3737,11 +3737,18 @@ else if (arg.startsWith("rename"))
 {
 	if (selection !== undefined)
 	{
-		var res = arg.split(' ');
-		var name = res[1];
-		selection.remote.name = name;
-		UpdateRemoteObject(selection);
-		Log("selection renamed to " + name, LOG_OK);
+		if (selection.remote.locked)
+		{
+			Log("selection is locked!", LOG_ERROR);
+		}
+		else
+		{
+			var res = arg.split(' ');
+			var name = res[1];
+			selection.remote.name = name;
+			UpdateRemoteObject(selection);
+			Log("selection renamed to " + name, LOG_OK);
+		}
 	}
 	else
 	{
