@@ -1224,6 +1224,7 @@ function animate()
 			{
 				target.active = true;
 				target.object3D = createObject(target.remote);
+				UpdateText(target);
 				objects.push(target.object3D);
 				objects_main[target.object3D.uuid] = target;
 		
@@ -1604,6 +1605,8 @@ function createObject(o)
 	//material.color.setHex(Math.random() * 0xffffff );
 	scene.add(cube);
 
+	
+	/*
 	var display_text = "";
 	//texte
 	//if (o.kind === "avatar")// || o.kind === "stream" || o.kind === "sound")
@@ -1637,7 +1640,7 @@ function createObject(o)
 			//console.log("text", text);
 	}
 
-
+	*/
 
 	if (o.kind === "light")
 	{
@@ -2158,6 +2161,49 @@ function moveCameraForward(distance) {
 
 	
 		
+}
+
+
+function UpdateText(o)
+{
+	if (o.text !== undefined)
+	{
+		o.object3D.remove(o.text);
+	}
+	var display_text = "";
+	//texte
+	//if (o.kind === "avatar")// || o.kind === "stream" || o.kind === "sound")
+	if (o.remote.kind === "avatar" || o.remote.kind === "resonator" || o.remote.kind === "sound" || o.remote.kind === "poi")
+	{
+		if (o.remote.name !== undefined)
+		{
+			display_text = o.remote.name;
+		}
+	}
+	if (display_text !== "")
+	{
+			var geometryText = new THREE.TextGeometry( display_text, {
+				font: font,
+				size: 20,
+				height: 0.5,
+				curveSegments: 1,
+				bevelEnabled: false,
+				bevelThickness: 1,
+				bevelSize: 0,
+				bevelOffset: 0,
+				bevelSegments: 5
+			} );
+
+			var materialText = new THREE.MeshPhongMaterial();
+			var text = new THREE.Mesh(geometryText, materialText);
+			o.object3D.add(text);
+			o.text = text;
+			text.scale.set(0.01,0.01,0.01);
+			text.position.y = 0.7;
+			text.rotation.y = Math.PI;
+			//console.log("text", text);
+	}
+
 }
 
 function UpdateSelection()
@@ -2793,11 +2839,18 @@ objectsRef.on('child_changed', function (snapshot) {
 	if (selectedObject.object3D !== undefined)
 	{
 		UpdateLocalObject(selectedObject);
+		if (selectedObject.remote.name !== selectedObject.currentname)
+		{
+			selectedObject.currentname = selectedObject.remote.name;
+			UpdateText(selectedObject);
+		}
 	}
 	if (object.kind === "avatar")
 	{
 		avatars[object.id].inactive = 0;
 	}
+
+	
 	
 	minimap_dirty = true;
 	network_activity++;
