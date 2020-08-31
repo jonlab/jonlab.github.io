@@ -39,11 +39,13 @@
 				var sample = new OscillatorSample(audioContext);
 
 
-				sample.toggle();
-				sample.gateOn();
+				//sample.toggle();
+				//sample.gateOn();
 
 
 			}
+
+			
 
 			function init() {
 
@@ -97,6 +99,13 @@
 						scene.add( mesh );
 
 					}
+					if (this.audioinit === undefined)
+					{
+						sample.toggle();
+						this.audioinit = true;
+
+					}
+					sample.gateOn();
 
 				}
 
