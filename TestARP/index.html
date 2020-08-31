@@ -5,13 +5,14 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 		<link type="text/css" rel="stylesheet" href="main.css">
+		<script src="oscillator-sample.js"></script>
 	</head>
 	<body>
 
 		<div id="info">
 			<a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> ar - hit test<br/>(Chrome Android 81+)
 		</div>
-
+		
 		<script type="module">
 
 			import * as THREE from './build/three.module.js';
@@ -28,8 +29,21 @@
 			var hitTestSource = null;
 			var hitTestSourceRequested = false;
 
+			var audioContext;
 			init();
+			initAudio();
 			animate();
+
+			function initAudio()
+			{
+				var sample = new OscillatorSample(audioContext);
+
+
+				sample.toggle();
+				sample.gateOn();
+
+
+			}
 
 			function init() {
 
@@ -52,7 +66,9 @@
 			}, undefined, function ( error ) {
 				console.error( error );
 			} );
-
+			var listener = new THREE.AudioListener();
+			camera.add(listener);
+			audioContext = listener.context;
 
 				//
 
