@@ -77,7 +77,7 @@ OscillatorSample.prototype.play = function() {
   this.lfo.start(0);
   var now = this.context.currentTime;
   this.vca.gain.linearRampToValueAtTime(0, now);
-  requestAnimationFrame(this.visualize.bind(this));
+  //requestAnimationFrame(this.visualize.bind(this));
 };
 
 OscillatorSample.prototype.stop = function() {
