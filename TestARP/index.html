@@ -16,10 +16,12 @@
 
 			import * as THREE from '../build/three.module.js';
 			import { ARButton } from './jsm/webxr/ARButton.js';
+			import { GLTFLoader } from './jsm/loaders/GLTFLoader.js';
 
 			var container;
 			var camera, scene, renderer;
 			var controller;
+			var gltfLoader;
 
 			var reticle;
 
@@ -31,6 +33,7 @@
 
 			function init() {
 
+				gltfLoader = new GLTFLoader();
 				container = document.createElement( 'div' );
 				document.body.appendChild( container );
 
@@ -41,6 +44,15 @@
 				var light = new THREE.HemisphereLight( 0xffffff, 0xbbbbff, 1 );
 				light.position.set( 0.5, 1, 0.25 );
 				scene.add( light );
+
+				gltfLoader.load( 'models/arp_odyssey.glb', function ( gltf ) 
+			{
+				//gltf.scene.scale.set(0.01,0.01,0.01);
+				scene.add( gltf.scene);
+			}, undefined, function ( error ) {
+				console.error( error );
+			} );
+
 
 				//
 
