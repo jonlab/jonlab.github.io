@@ -116,6 +116,21 @@ OscillatorSample.prototype.playNote = function() {
   this.vca.gain.linearRampToValueAtTime(0, now + this.ar_attack+this.ar_release);
 };
 
+OscillatorSample.prototype.randomize = function() {
+  
+  
+  this.vco1coarse = Math.random()*200;
+  this.vco2coarse = Math.random()*200;
+  this.ar_attack = Math.random()*1;
+  this.ar_release = Math.random()*1;
+  this.setLFOFrequency(Math.random()*4);
+  this.changeCutoff(Math.random()*3000);
+  this.changeQ(Math.random()*10);
+  this.setLFOGain(Math.random()*1);
+
+  
+};
+
 OscillatorSample.prototype.gateOn = function() {
   
   this.voltage = 0.2+Math.random()*6;
