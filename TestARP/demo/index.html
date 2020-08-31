@@ -90,13 +90,15 @@
 
 				function onSelect() {
 
-					if ( reticle.visible ) {
+					if ( reticle.visible ) 
+					{
 
-						var material = new THREE.MeshPhongMaterial( { color: 0xffffff * Math.random() } );
+						/*var material = new THREE.MeshPhongMaterial( { color: 0xffffff * Math.random() } );
 						var mesh = new THREE.Mesh( geometry, material );
 						mesh.position.setFromMatrixPosition( reticle.matrix );
 						mesh.scale.y = Math.random() * 2 + 1;
 						scene.add( mesh );
+						*/
 
 					}
 					if (this.audioinit === undefined)
