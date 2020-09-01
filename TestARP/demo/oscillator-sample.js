@@ -124,10 +124,10 @@ OscillatorSample.prototype.randomize = function() {
   this.ar_attack = Math.random()*2-1;
   if (this.ar_attack < 0)
   this.ar_attack = 0;
-  this.ar_release = Math.random()*1;
-  this.setLFOFrequency(Math.random()*4);
-  this.changeCutoff(Math.random()*5000);
-  this.changeQ(Math.random()*20);
+  this.ar_release = Math.random()*2;
+  this.setLFOFrequency(Math.random()*6);
+  this.changeCutoff(Math.random()*4000);
+  this.changeQ(Math.random()*30);
   this.setLFOGain(Math.random()*1);
   
 };
