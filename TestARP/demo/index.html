@@ -24,6 +24,7 @@
 			var controller;
 			var gltfLoader;
 
+			var reticleQuad;
 			var reticle;
 			var sample;
 			var hitTestSource = null;
@@ -99,8 +100,8 @@
 						{
 							//gltf.scene.scale.set(0.01,0.01,0.01);
 							scene.add( gltf.scene);
-							gltf.scene.position.setFromMatrixPosition(reticle.matrix);
-							gltf.scene.setRotationFromMatrix(reticle.matrix);
+							gltf.scene.position.setFromMatrixPosition(reticleQuad.matrix);
+							gltf.scene.setRotationFromMatrix(reticleQuad.matrix);
 						}, undefined, function ( error ) {
 							console.error( error );
 						} );
@@ -116,13 +117,24 @@
 				controller.addEventListener( 'select', onSelect );
 				scene.add( controller );
 
-				reticle = new THREE.Mesh(
-					//new THREE.RingBufferGeometry( 0.15, 0.2, 32 ).rotateX( - Math.PI / 2 ),
+				reticleQuad = new THREE.Mesh(
 					new THREE.PlaneBufferGeometry( 0.6, 0.45, 2, 2 ).rotateX( - Math.PI / 2 ),
+					new THREE.MeshBasicMaterial()
+				);
+				reticleQuad.matrixAutoUpdate = false;
+				reticleQuad.visible = false;
+
+
+				scene.add( reticleQuad );
+
+				reticle = new THREE.Mesh(
+					new THREE.RingBufferGeometry( 0.15, 0.2, 32 ).rotateX( - Math.PI / 2 ),
 					new THREE.MeshBasicMaterial()
 				);
 				reticle.matrixAutoUpdate = false;
 				reticle.visible = false;
+
+				
 				scene.add( reticle );
 
 				//
@@ -186,12 +198,24 @@
 
 							var hit = hitTestResults[ 0 ];
 
-							reticle.visible = true;
+							if (this.audioinit === undefined)
+							{
+								reticle.visible = false;
+								reticleQuad.visible = true;
+							}
+							else
+							{
+								reticle.visible = true;
+								reticleQuad.visible = false;
+							}
+
 							reticle.matrix.fromArray( hit.getPose( referenceSpace ).transform.matrix );
+							reticleQuad.matrix.fromArray( hit.getPose( referenceSpace ).transform.matrix );
 
 						} else {
 
 							reticle.visible = false;
+							reticleQuad.visible = false;
 
 						}
 
