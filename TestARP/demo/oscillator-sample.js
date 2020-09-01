@@ -121,7 +121,10 @@ OscillatorSample.prototype.randomize = function() {
   
   this.vco1coarse = Math.random()*200;
   this.vco2coarse = Math.random()*200;
-  this.ar_attack = Math.random()*1;
+
+  this.ar_attack = Math.random()*2-1;
+  if (this.ar_attack < 0)
+  this.ar_attack = 0;
   this.ar_release = Math.random()*1;
   this.setLFOFrequency(Math.random()*4);
   this.changeCutoff(Math.random()*5000);
