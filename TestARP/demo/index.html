@@ -57,13 +57,7 @@
 				light.position.set( 0.5, 1, 0.25 );
 				scene.add( light );
 
-				gltfLoader.load( 'models/arp_odyssey.glb', function ( gltf ) 
-			{
-				//gltf.scene.scale.set(0.01,0.01,0.01);
-				scene.add( gltf.scene);
-			}, undefined, function ( error ) {
-				console.error( error );
-			} );
+				
 			var listener = new THREE.AudioListener();
 			camera.add(listener);
 			audioContext = listener.context;
@@ -101,6 +95,16 @@
 					{
 						sample.toggle();
 						this.audioinit = true;
+						gltfLoader.load( 'models/arp_odyssey.glb', function ( gltf ) 
+						{
+							//gltf.scene.scale.set(0.01,0.01,0.01);
+							scene.add( gltf.scene);
+							gltf.scene.position.setFromMatrixPosition(reticle.matrix);
+						}, undefined, function ( error ) {
+							console.error( error );
+						} );
+
+
 
 					}
 					sample.randomize();

@@ -101,7 +101,6 @@ OscillatorSample.prototype.playNote = function() {
   //this.vco1.frequency.value = freq1;
   //this.vco2.frequency.value = freq2;
 
-
   var now = this.context.currentTime;
 
   this.vco1.frequency.cancelScheduledValues(now);
@@ -148,7 +147,6 @@ OscillatorSample.prototype.gateOn = function() {
   this.vca.gain.cancelScheduledValues(now);
   // Ramp quickly up.
   this.vca.gain.linearRampToValueAtTime(1.0, now + 1);
-  
 };
 
 
