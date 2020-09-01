@@ -31,6 +31,7 @@
 			var hitTestSourceRequested = false;
 
 			var audioContext;
+			var audioinit = false;
 			init();
 			initAudio();
 			animate();
@@ -92,10 +93,10 @@
 						*/
 
 					}
-					if (this.audioinit === undefined)
+					if (audioinit === false)
 					{
 						sample.toggle();
-						this.audioinit = true;
+						audioinit = true;
 						gltfLoader.load( 'models/arp_odyssey.glb', function ( gltf ) 
 						{
 							//gltf.scene.scale.set(0.01,0.01,0.01);
@@ -198,7 +199,7 @@
 
 							var hit = hitTestResults[ 0 ];
 
-							if (this.audioinit === undefined)
+							if (audioinit === false)
 							{
 								reticle.visible = false;
 								reticleQuad.visible = true;
