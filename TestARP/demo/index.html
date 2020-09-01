@@ -100,15 +100,16 @@
 							//gltf.scene.scale.set(0.01,0.01,0.01);
 							scene.add( gltf.scene);
 							gltf.scene.position.setFromMatrixPosition(reticle.matrix);
+							gltf.scene.setRotationFromMatrix(reticle.matrix);
 						}, undefined, function ( error ) {
 							console.error( error );
 						} );
-
-
-
 					}
-					sample.randomize();
-					sample.playNote();
+					else
+					{
+						sample.randomize();
+						sample.playNote();
+					}
 				}
 
 				controller = renderer.xr.getController( 0 );
