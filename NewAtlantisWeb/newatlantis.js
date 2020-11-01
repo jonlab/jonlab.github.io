@@ -80,6 +80,7 @@ var controller_freesound;
 var controller_createfreesound;
 var freesound_list;
 
+
 var scene; //Three js 3D scene
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
@@ -175,7 +176,14 @@ var Inspector = function()
 	this.position = "";
 	this.poi = '{"x":0,"y":1,"z":0}';
 	this.distance = 400;
-	this.inclination = 0.1; //0.49
+	//Aix en Provence
+	//7:15 - 17:30
+	//7:15 0.0
+	//17:30 0.5
+
+	//inclination = 0 top 0.5 horizon
+	this.inclination = 0.175; 
+
 	this.azimuth = 0.99; //0.205
 	this.timeEnabled = true;
 	this.name = "untitled";
@@ -1131,9 +1139,49 @@ function animate()
 	main_timer += dt;
 	if (parameters.timeEnabled)
 	{
-		parameters.azimuth = parameters.azimuth+dt/360;
-		if (parameters.azimuth > 1)
-			parameters.azimuth -= 1;
+
+		//parameters.azimuth = parameters.azimuth+dt/360;
+		//if (parameters.azimuth > 1)
+		//	parameters.azimuth -= 1;
+
+		//Aix en Provence
+		//7:15 - 17:30
+		//7:15 0.0
+		//17:30 0.5
+		
+		var dayduration = 36900;
+		var totalduration = 24*3600;
+		//var now = new Date(2020,10,1,0,0,0);
+		var now = new Date();
+		
+
+		var sunrise = 7*3600+15*60;
+		var sunset = 17*3600+30*60;
+		var h = now.getHours();
+		var m = now.getMinutes();
+		var s = now.getSeconds();
+		var now_total_seconds = h*3600+m*60+s;
+
+		//console.log(now_total_seconds);
+
+		if (now_total_seconds<sunrise)
+		{
+			//before sunrise
+			parameters.azimuth = 0.5+(totalduration-sunset+now_total_seconds)/(totalduration-(sunset-sunrise))*0.5;
+		}
+		else if (now_total_seconds<sunset)
+		{
+			//between sunrise and sunset
+			parameters.azimuth = 0+(now_total_seconds-sunrise)/(sunset-sunrise)*0.5;
+
+		}
+		else 
+		{
+			//after sunset
+			parameters.azimuth = 0.5+(now_total_seconds-sunset)/(totalduration-(sunset-sunrise))*0.5;
+		}
+
+
 		updateSun();
 		water.material.uniforms[ 'time' ].value += dt;
 	}
