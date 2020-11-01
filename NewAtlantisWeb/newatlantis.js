@@ -589,7 +589,7 @@ scene.add( control );
 fogColor = new THREE.Color(0x001133);
 
 
-if (mode !== "normal")
+if (mode === "postprocess")
 {
 	composer = new EffectComposer( renderer );
 	var renderPass = new RenderPass( scene, camera );
@@ -1414,13 +1414,13 @@ function animate()
 	//console.log("end");
 
 	
-	if (mode === "normal")
+	if (mode === "postprocess")
 	{
-		renderer.render(scene, camera);
+		composer.render(scene, camera);
 	}
 	else
 	{
-		composer.render(scene, camera);
+		renderer.render(scene, camera);
 	}
 	profiler5 = ProfilerStop();
 	ProfilerStart();
