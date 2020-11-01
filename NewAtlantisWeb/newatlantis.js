@@ -179,7 +179,8 @@ var Inspector = function()
 	this.azimuth = 0.99; //0.205
 	this.timeEnabled = true;
 	this.name = "untitled";
-	this.URL = 'http://locus.creacast.com:9001/le-rove_niolon.mp3';
+	this.URL = 'https://locus.creacast.com:9001/le-rove_niolon.mp3';
+	this.url = "https://locus.creacast.com:9443/south_walney.mp3";
 	this.search = "seagull";
 	this.color = [ 0, 128, 255 ]; // RGB array
 	this.volume = 0.5;
@@ -209,6 +210,12 @@ var Inspector = function()
 		var url = this.source;
 		ActionSound(url);
 	};
+
+	this.createStream = function()
+	{
+		var url = this.url;
+		ActionStream(url);
+	}
 
 	this.startRecording = function()
 	{
@@ -1742,7 +1749,10 @@ function createObject(o)
 		}
 		else if (o.kind === "stream")
 		{
-			var mediaElement = new Audio("http://locus.creacast.com:9001/le-rove_niolon.mp3");
+			//
+			//var mediaElement = new Audio("https://locus.creacast.com:9443/south_walney.mp3");
+			var mediaElement = new Audio(o.url);
+			//var mediaElement = new Audio("https://locus.creacast.com:9001/le-rove_niolon.mp3");
 			mediaElement.crossOrigin = "anonymous";
 			mediaElement.loop = true;
 			mediaElement.play();
@@ -3167,6 +3177,14 @@ function ActionSound(url, name)
 	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
 }
 
+function ActionStream(url)
+{
+	var obj= getNewObjectCommand("stream");
+	obj.name = "stream";
+	obj.url = url;
+	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
+}
+
 function ActionResonator(ir)
 {
 	var obj= getNewObjectCommand("resonator");
@@ -3367,6 +3385,7 @@ var f3D;
 var fBox;
 var fSpace;
 var fAudioSourcesFreeSound;
+var fAudioSourcesStream;
 
 function CreateGUI()
 {
@@ -3407,6 +3426,9 @@ function CreateGUI()
 	fAudioSourcesFreeSound.add(parameters, "searchFreesound");
 	
 	
+	fAudioSourcesStream = fAudioSources.addFolder("Stream");
+	fAudioSourcesStream.add(parameters, "url");
+	fAudioSourcesStream.add(parameters, "createStream");
 	
 
 	//fBox.add(parameters, "box1");
