@@ -1868,7 +1868,7 @@ function createObject(o)
 			cube.convolver = audioContext.createConvolver();
 			var audioLoader = new THREE.AudioLoader();
 			audioLoader.load( o.ir, function( buffer ) {
-				console.log("LOADED!", buffer);
+				//console.log("LOADED!", buffer);
 				Log("loaded IR " + o.ir, LOG_INFO);
 				cube.convolver.buffer = buffer;
 			});
@@ -4023,6 +4023,8 @@ function UpdateMinimap()
 			}
 		}
 		var audio_sources_active_count = 0;
+		var resonator_active_count = 0;
+		var box_active_count = 0;
 		for (var j in space_objects)
 		{
 			var target = space_objects[j];
@@ -4030,8 +4032,18 @@ function UpdateMinimap()
 			{
 				audio_sources_active_count++;
 			}
+
+			if (target.active && target.remote.kind === "resonator")
+			{
+				resonator_active_count++;
+
+			}
+			if (target.active && target.remote.kind === "box")
+			{
+				box_active_count++;
+			}
 		}
-		ctx_minimap.fillText("mess:"+network_activity + " d:" + network_bytes+" o:" + objects.length + " a:"+ avatar_active_count + " s:" + audio_sources_active_count, 0, 200 );
+		ctx_minimap.fillText("mess:"+network_activity + " d:" + network_bytes+" o:" + objects.length + " a:"+ avatar_active_count + " s:" + audio_sources_active_count + " r:" + resonator_active_count + " b:" + box_active_count, 0, 200 );
 	}
 }
 
