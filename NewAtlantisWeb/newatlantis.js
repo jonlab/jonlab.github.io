@@ -140,7 +140,7 @@ var run_button;
 var stop_script_button;
 var listener_filter;
 
-var loading_threshold = 500;
+var loading_threshold = 200;
 
 var spawning_point="";
 
@@ -2498,9 +2498,13 @@ elWebcam.appendChild(elVideo);
 
 if (navigator.mediaDevices) 
 {
-	console.log('getUserMedia supported.');
+	//console.log('getUserMedia supported.');
+	Log("supported media devices...");
+
 	navigator.mediaDevices.getUserMedia ({audio: true, video: false})
 	.then(function(stream) {
+		
+		Log("audio OK!");
 		
 		// Create a MediaStreamAudioSourceNode
 		// Feed the HTMLMediaElement into it
@@ -2511,7 +2515,7 @@ if (navigator.mediaDevices)
 			encoding: "mp3",
 			channels: 1,
 			timeLimit: 20,
-			encodeAfterRecord: false
+			encodeAfterRecord: true
 			});
 
 		audioRecorder.onComplete = function(recorder, blob) 
@@ -2531,6 +2535,8 @@ if (navigator.mediaDevices)
 		};
 	})
 	.catch(function(err) {
+		Log("audio ERROR!");
+		Log(err);
 		console.log('The following gUM error occured: ' + err);
 	});
 
@@ -4016,7 +4022,16 @@ function UpdateMinimap()
 				avatar_active_count++;
 			}
 		}
-		ctx_minimap.fillText("mess:"+network_activity + " d:" + network_bytes+" o:" + objects.length + " a:"+ avatar_active_count, 0, 200 );
+		var audio_sources_active_count = 0;
+		for (var j in space_objects)
+		{
+			var target = space_objects[j];
+			if (target.active && target.remote.kind === "sound")
+			{
+				audio_sources_active_count++;
+			}
+		}
+		ctx_minimap.fillText("mess:"+network_activity + " d:" + network_bytes+" o:" + objects.length + " a:"+ avatar_active_count + " s:" + audio_sources_active_count, 0, 200 );
 	}
 }
 
@@ -4180,13 +4195,13 @@ function Clap(space_object, source_pos, listener_pos)
 function PlotOnMinimap(worldposition, category)
 {
 	if (category === 0)
-		ctx_minimap.fillStyle = '#F00';
+		ctx_minimap.fillStyle = '#00F'; //sound
 	else if (category === 1)
-		ctx_minimap.fillStyle = '#0F0';
+		ctx_minimap.fillStyle = '#0F0'; //default
 	else if (category === 2)
-		ctx_minimap.fillStyle = '#00F';
+		ctx_minimap.fillStyle = '#F00'; //avatar
 	else if (category === 3)
-		ctx_minimap.fillStyle = '#FFF';
+		ctx_minimap.fillStyle = '#FFF'; //camera
 	else if (category === 4)
 		ctx_minimap.fillStyle = '#FF0';
 	else if (category === 5)
@@ -4198,7 +4213,7 @@ function PlotOnMinimap(worldposition, category)
 	else if (category === 8)
 		ctx_minimap.fillStyle = '#F7F';
 	else if (category === 9)
-		ctx_minimap.fillStyle = '#777';
+		ctx_minimap.fillStyle = '#444';
 	//1pixel-100m scale
 	var nx = Math.floor(100+(-worldposition.x)/50+0.5);
 	var ny = Math.floor(100+(-worldposition.z)/50+0.5);
