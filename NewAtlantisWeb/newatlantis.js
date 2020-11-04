@@ -1437,7 +1437,7 @@ function animate()
 								{
 
 								}
-								Log("connect " + o.remote.name + " -> " + r.remote.name + " " + o.convolver);
+								//Log("connect " + o.remote.name + " -> " + r.remote.name + " " + o.convolver);
 							}
 							convolver = o.convolver;
 						}	
