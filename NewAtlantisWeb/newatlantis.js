@@ -2920,8 +2920,11 @@ function StartDSP()
 				avatar_speed = 5;
 			break;
 			case 82: //R
-			audioRecorder.finishRecording();
-			Log("R: recording stopped...", LOG_WARNING);
+			if (!(document.activeElement === chat_input))
+			{
+				audioRecorder.finishRecording();
+				Log("R: recording stopped...", LOG_WARNING);
+			}
 			break;
 		}
 	}, false);
@@ -2971,13 +2974,17 @@ function StartDSP()
 				avatar_speed = 340;
 			break;
 			case 82: //R
-			if (event.repeat === false)
+			if (!(document.activeElement === chat_input))
 			{
-				console.log(event);
-				current_loop = false;
-				current_talk = true;
-				audioRecorder.startRecording();
-				Log("R: recording started...", LOG_ERROR);
+				if (event.repeat === false)
+				{
+					console.log(event);
+					current_loop = false;
+					current_talk = true;
+					audioRecorder.startRecording();
+					Log("R: recording started...", LOG_ERROR);
+			
+				}	
 			}
 			
 			break;
