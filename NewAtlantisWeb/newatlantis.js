@@ -127,6 +127,8 @@ var inputFile;
 var fogColor;
 
 var audioRecorder; 
+var current_loop = true;
+var current_talk = false;
 
 var vec = new THREE.Vector3();
 var dir = new THREE.Vector3();
@@ -234,7 +236,10 @@ var Inspector = function()
 
 	this.startRecording = function()
 	{
+		current_loop = true;
+		current_talk = false;
 		audioRecorder.startRecording();
+
 		Log("recording started...", LOG_ERROR);
 	};
 
@@ -1872,8 +1877,10 @@ function createObject(o)
 			//Log("loaded sound SR=" + buffer.sampleRate);
 			Log("loaded sound #" +o.id + " " + Math.floor(buffer.length/1000) + "k samples @ " + buffer.sampleRate, LOG_INFO);
 			sound.setBuffer( buffer );
-
-			sound.setLoop( false );
+			if (o.loop === false)
+				sound.setLoop( false );
+			else
+				sound.setLoop( true );
 			sound.setVolume(1);
 			if (o.aplaying === true)
 			{
@@ -1902,7 +1909,14 @@ function createObject(o)
 			}
 			);
 			sound.setRefDistance(1);
-			sound.setRolloffFactor(ROLL_OFF_FACTOR);
+			if (o.talk !== undefined)
+			{
+				sound.setRolloffFactor(0.5);
+			}
+			else
+			{
+				sound.setRolloffFactor(ROLL_OFF_FACTOR);
+			}
 			sound.setMaxDistance(10000);
 			sound.panner.panningModel = 'equalpower';
 			//sound.panner.panningModel = 'HRTF'; //do not use this one, very expensive
@@ -2152,7 +2166,7 @@ function uploadModelFile(file, worldposition, worldrotation)
 function openFileAudio(event) {
 	var file = event.target.files[0];
 	Log("try to upload " + file.name, LOG_WARNING);
-	uploadAudioFile(file);
+	uploadAudioFile(file, undefined, false);
 }
 
 
@@ -2182,7 +2196,7 @@ function openFile(event) {
 }
 
 
-function uploadAudioFile(file, worldposition)
+function uploadAudioFile(file, worldposition, looping, talk)
 {
 	var storage = firebase.storage();
 	var storageRef = storage.ref(); // Create a storage reference from our storage service
@@ -2200,6 +2214,14 @@ function uploadAudioFile(file, worldposition)
 			obj.x = worldposition.x;
 			obj.y = worldposition.y;
 			obj.z = worldposition.z;
+		}
+		if (looping !== undefined)
+		{
+			obj.loop = looping;
+		}
+		if (talk !== undefined)
+		{
+			obj.talk = talk;
 		}
 		fileRef.getDownloadURL().then(function(url) {
 			obj.url = url;
@@ -2579,7 +2601,7 @@ if (navigator.mediaDevices)
 			spawn_position.addScaledVector(raycaster.ray.direction, 5);
 			//we upload the audio content in NA
 			blob.name = "recording";
-			uploadAudioFile(blob, spawn_position);
+			uploadAudioFile(blob, spawn_position, current_loop, current_talk);
 		};
 	})
 	.catch(function(err) {
@@ -2897,6 +2919,10 @@ function StartDSP()
 			case 16: //shift
 				avatar_speed = 5;
 			break;
+			case 82: //R
+			audioRecorder.finishRecording();
+			Log("R: recording stopped...", LOG_WARNING);
+			break;
 		}
 	}, false);
 
@@ -2943,6 +2969,17 @@ function StartDSP()
 			break;
 			case 16: //shift
 				avatar_speed = 340;
+			break;
+			case 82: //R
+			if (event.repeat === false)
+			{
+				console.log(event);
+				current_loop = false;
+				current_talk = true;
+				audioRecorder.startRecording();
+				Log("R: recording started...", LOG_ERROR);
+			}
+			
 			break;
 		}
 	}, false);
@@ -3654,7 +3691,7 @@ function OnDrop(ev)
 			}
 			else
 			{
-				uploadAudioFile(file, spawn_position);
+				uploadAudioFile(file, spawn_position, true);
 			}
 
 			
