@@ -80,6 +80,12 @@ var controller_freesound;
 var controller_createfreesound;
 var freesound_list;
 
+var baseurl_streamsearch = "https://locusonus.org/soundmap/list/?list=creacast";
+//var baseurl_streamsearch = "https://locusonus.org/soundmap/list/";
+var controller_stream;
+var controller_createstream;
+var stream_list;
+
 
 var scene; //Three js 3D scene
 var raycaster = new THREE.Raycaster();
@@ -108,6 +114,7 @@ var object_selection;
 var inner_object_selection;
 var audio_object_selection;
 var listener;
+var refposition = new THREE.Vector3();
 var fontLoader;
 var gltfLoader;
 var font;
@@ -199,7 +206,7 @@ var Inspector = function()
 	this.fx = "biquad_lowpass";
 
 	this.freesound = "";
-
+	this.stream = "";
 
 	this.update = function() {
 		alert("update");
@@ -252,6 +259,24 @@ var Inspector = function()
 			}
 		}
 		ActionSound(url, name);
+	};
+
+
+	this.createStream = function()
+	{
+		var url = this.stream;
+		var name = "stream";
+		for (var i in stream_list)
+		{
+			console.log("check " + i);
+			var _url = stream_list[i];
+			if (url === _url)
+			{
+				name = i;
+				console.log("ok !");
+			}
+		}
+		ActionStream(url, name);
 	};
 
 	this.createObject = function()
@@ -314,6 +339,38 @@ var Inspector = function()
 			controller_createfreesound = fAudioSourcesFreeSound.add(parameters, "createFreesound");
 			if (result.results.length > 0)
 				this.freesound = result.results[0].previews['preview-hq-mp3'];
+		}
+		req.send();
+	};
+
+	this.searchStream = function()
+	{
+		Log("stream request, please wait...");
+		var url = baseurl_streamsearch;
+		var req = new XMLHttpRequest();
+		req.open("GET", url, true);
+		req.onload = function() 
+		{
+			var result = JSON.parse(req.response);
+			console.log("streams returned:", result);
+			//construct the results UI
+			stream_list = {};
+			for (var i in result)
+			{
+
+				var entry = result[i];
+				var key = entry.name;
+				stream_list[key] = entry.url;
+				
+			}
+			if (controller_stream !== undefined)
+				controller_stream.remove();
+			if (controller_createstream !== undefined)
+			controller_createstream.remove();
+			controller_createstream = fAudioSourcesStream.add(parameters, "stream", stream_list);
+			controller_createstream = fAudioSourcesStream.add(parameters, "createStream");
+			if (result.length > 0)
+				this.stream = result[0].url;
 		}
 		req.send();
 	};
@@ -834,6 +891,7 @@ listener = new THREE.AudioListener();
 camera.add(listener);
 audioContext = listener.context;
 
+Log("listener SR="+audioContext.sampleRate);
 
 
 
@@ -1264,7 +1322,7 @@ function animate()
 	ProfilerStart();
 	//Log(spawning_point);
 	//streaming
-	var refposition = new THREE.Vector3();
+	//refposition = new THREE.Vector3();
 	refposition = camera.getWorldPosition(refposition);
 	//console.log("refposition", refposition);
 	if (spawning_point === undefined || spawning_point === "" || spawning_point === null)
@@ -1330,11 +1388,12 @@ function animate()
 	profiler3 = ProfilerStop();
 	ProfilerStart();
 	//console.log("start");
-	//compute all boxes
+	
+	//compute all boxes...
 	for (var j in space_objects)
 	{
 		var r = space_objects[j];
-		if ((r.remote.kind === "resonator" || r.remote.kind === "box") && r.active)
+		if (r.active && (r.remote.kind === "resonator" || r.remote.kind === "box"))
 		{
 			//update bounding box
 			r.bb = new THREE.Box3();
@@ -1343,6 +1402,7 @@ function animate()
 		}
 	}
 
+	
 	for (var i in space_objects)
 	{
 		var o = space_objects[i];
@@ -1361,7 +1421,7 @@ function animate()
 					var isInside = r.bb.containsPoint(o.object3D.position); //check if sound inside box
 					if (isInside && o.object3D.audio.gain != undefined)
 					{
-						if ( r.object3D.convolver !== undefined)
+						if ( r.object3D.convolver !== undefined) //this is a valid convolver
 						{
 							//we are inside a convolver zone
 							if (o.convolver !== r.object3D.convolver)
@@ -1377,7 +1437,7 @@ function animate()
 								{
 
 								}
-								//Log("connect " + o.remote.name + " -> " + r.remote.name + " " + o.convolver);
+								Log("connect " + o.remote.name + " -> " + r.remote.name + " " + o.convolver);
 							}
 							convolver = o.convolver;
 						}	
@@ -1442,21 +1502,7 @@ function animate()
 			}
 		}
 	}
-
-	/*for (var i in space_objects)
-	{
-		var o = space_objects[i];
-		if (o.active && o.object3D !==undefined && (o.convolver === undefined && o.afx === undefined) && o.object3D.audio !== undefined && o.object3D.audio.gain != undefined)
-		{
-			//source in free air (not inside at least 1 resonator), we disconnect it and connect directly to the listener
-			//Log("connect to listener " + o.afx);
-			o.object3D.audio.gain.disconnect();
-			o.object3D.audio.gain.connect(o.object3D.audio.listener.getInput());
-			o.convolver = undefined;
-			o.afx = undefined;
-		}
-	}
-	*/
+	
 	profiler4 = ProfilerStop();
 	ProfilerStart();
 	//console.log("end");
@@ -1822,8 +1868,9 @@ function createObject(o)
 			var audioLoader = new THREE.AudioLoader();
 			audioLoader.load( o.url, function( buffer ) {
 				//console.log("LOADED!", buffer);
-				Log("loaded sound #" +o.id + " " + o.url + " - " + buffer.length/1000 + "k samples", LOG_INFO);
-
+				//Log("loaded sound #" +o.id + " " + o.url + " - " + Math.floor(buffer.length/1000) + "k samples", LOG_INFO);
+			//Log("loaded sound SR=" + buffer.sampleRate);
+			Log("loaded sound #" +o.id + " " + Math.floor(buffer.length/1000) + "k samples @ " + buffer.sampleRate, LOG_INFO);
 			sound.setBuffer( buffer );
 			sound.setLoop( true );
 			sound.setVolume(1);
@@ -1857,7 +1904,7 @@ function createObject(o)
 			sound.setRolloffFactor(ROLL_OFF_FACTOR);
 			sound.setMaxDistance(10000);
 			sound.panner.panningModel = 'equalpower';
-			//sound.panner.panningModel = 'HRTF';
+			//sound.panner.panningModel = 'HRTF'; //do not use this one, very expensive
 			//linear inverse exponential
 			sound.setDistanceModel("exponential");
 			material.wireframe = true;
@@ -1865,7 +1912,7 @@ function createObject(o)
 
 		else if (o.kind === "resonator")
 		{
-			cube.convolver = audioContext.createConvolver();
+			cube.convolver = audioContext.createConvolver(); //very expensive also
 			var audioLoader = new THREE.AudioLoader();
 			audioLoader.load( o.ir, function( buffer ) {
 				//console.log("LOADED!", buffer);
@@ -2232,7 +2279,7 @@ function UpdateText(o)
 	var display_text = "";
 	//texte
 	//if (o.kind === "avatar")// || o.kind === "stream" || o.kind === "sound")
-	if (o.remote.kind === "avatar" || o.remote.kind === "resonator" || o.remote.kind === "sound" || o.remote.kind === "poi")
+	if (o.remote.kind === "avatar" || o.remote.kind === "resonator" || o.remote.kind === "sound" || o.remote.kind === "poi" || o.remote.kind === "stream")
 	{
 		if (o.remote.name !== undefined)
 		{
@@ -2581,7 +2628,7 @@ function capture(video, scaleFactor) {
 } 
 
 var capture_canvas;
-
+var minimap_mode = 0;
 function StartDSP()
 {
 	capture_canvas = capture(elVideo);
@@ -2669,6 +2716,14 @@ function StartDSP()
 	
 	ctx_minimap = document.createElement('canvas').getContext('2d');
 	elMinimap.appendChild(ctx_minimap.canvas);
+	elMinimap.onclick = function()
+	{
+		//alert("click on minimap");
+		minimap_mode++;
+		minimap_mode = minimap_mode % 3;
+		minimap_dirty = true;
+		
+	};
 	ctx_minimap.canvas.width = 200;
 	ctx_minimap.canvas.height = 200;
 	ctx_minimap.fillStyle = '#000';
@@ -3231,10 +3286,13 @@ function ActionSound(url, name)
 	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
 }
 
-function ActionStream(url)
+function ActionStream(url, name)
 {
 	var obj= getNewObjectCommand("stream");
-	obj.name = "stream";
+	if (name !== undefined)
+		obj.name = name;
+	else
+		obj.name = url;
 	obj.url = url;
 	firebase.database().ref('spaces/test/objects/' + obj.id).set(obj);
 }
@@ -3481,8 +3539,8 @@ function CreateGUI()
 	
 	
 	fAudioSourcesStream = fAudioSources.addFolder("Stream");
-	fAudioSourcesStream.add(parameters, "url");
-	fAudioSourcesStream.add(parameters, "createStream");
+	//fAudioSourcesStream.add(parameters, "url");
+	fAudioSourcesStream.add(parameters, "searchStream");
 	
 
 	//fBox.add(parameters, "box1");
@@ -4206,6 +4264,7 @@ function Clap(space_object, source_pos, listener_pos)
 
 function PlotOnMinimap(worldposition, category)
 {
+	//return;
 	if (category === 0)
 		ctx_minimap.fillStyle = '#00F'; //sound
 	else if (category === 1)
@@ -4227,8 +4286,25 @@ function PlotOnMinimap(worldposition, category)
 	else if (category === 9)
 		ctx_minimap.fillStyle = '#444';
 	//1pixel-100m scale
-	var nx = Math.floor(100+(-worldposition.x)/50+0.5);
-	var ny = Math.floor(100+(-worldposition.z)/50+0.5);
+	var nx = 0;
+	var ny = 0;
+	if (minimap_mode === 0)
+	{
+		nx = 100+(-worldposition.x)*0.02;
+		ny = 100+(-worldposition.z)*0.02;
+	}
+	else if (minimap_mode === 1)
+	{
+		nx = 100+(worldposition.x-refposition.x)*0.2;
+		ny = 100+(worldposition.z-refposition.z)*0.2;
+	}
+	else if (minimap_mode === 2)
+	{
+		nx = 100+worldposition.x-refposition.x;
+		ny = 100+worldposition.z-refposition.z;
+	}
+	nx = Math.floor(nx+0.5);
+	ny = Math.floor(ny+0.5);
 	ctx_minimap.fillRect(nx-1, ny-1, 3, 3);
 
 }
