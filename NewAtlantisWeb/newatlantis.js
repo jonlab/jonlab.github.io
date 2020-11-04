@@ -1872,7 +1872,8 @@ function createObject(o)
 			//Log("loaded sound SR=" + buffer.sampleRate);
 			Log("loaded sound #" +o.id + " " + Math.floor(buffer.length/1000) + "k samples @ " + buffer.sampleRate, LOG_INFO);
 			sound.setBuffer( buffer );
-			sound.setLoop( true );
+
+			sound.setLoop( false );
 			sound.setVolume(1);
 			if (o.aplaying === true)
 			{
@@ -2338,7 +2339,7 @@ function ToggleSelectionAudioPlaying()
 {
 	if (selection !== undefined)
 	{
-		if (selection.remote.aplaying === false)
+		if (selection.remote.aplaying === false/* || !selection.object3D.audio.isPlaying*/)
 		{
 			//Log("space play");
 			selection.remote.aplaying = true;
@@ -3450,14 +3451,24 @@ function UpdateLocalObject(object)
 		{
 			//should playx
 			object.object3D.audio.play();
-			Log("audio play", LOG_OK);
+			Log("audio play " + object.remote.name, LOG_OK);
 		}
-		if (!object.remote.aplaying && object.object3D.audio.isPlaying)
+		else if (!object.remote.aplaying && object.object3D.audio.isPlaying)
 		{
 			//should stop
 			object.object3D.audio.stop();
-			Log("audio stop", LOG_WARNING);
+			Log("audio stop " + object.remote.name, LOG_WARNING);
 		}
+		/*else if (object.remote.aplaying && object.object3D.audio.isPlaying)
+		{
+			Log("audio " + object.remote.name + " already playing..." , LOG_WARNING);
+		}
+		else if (!object.remote.aplaying && !object.object3D.audio.isPlaying)
+		{
+			Log("audio " + object.remote.name + " already stopped..." , LOG_WARNING);
+		}
+		*/
+
 	}
 }
 
