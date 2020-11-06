@@ -2166,7 +2166,7 @@ function uploadModelFile(file, worldposition, worldrotation)
 function openFileAudio(event) {
 	var file = event.target.files[0];
 	Log("try to upload " + file.name, LOG_WARNING);
-	uploadAudioFile(file, undefined, false);
+	uploadAudioFile(file, undefined, true);
 }
 
 
