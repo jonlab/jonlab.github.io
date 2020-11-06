@@ -3043,7 +3043,7 @@ objectsRef.on('child_added', function (snapshot) {
 		}
 	}
 	
-	if (spawning_point === object.name)
+	if (spawning_point === object.name && spawning_point !== "")
 	{
 		console.log("go to spawning point");
 		Log("go to spawning point " + spawning_point, LOG_OK);
