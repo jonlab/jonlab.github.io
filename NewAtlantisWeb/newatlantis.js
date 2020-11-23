@@ -38,7 +38,7 @@ const LOG_WARNING = 2;
 const LOG_ERROR = 3;
 const LOG_CHAT = 4;
 
-const ROLL_OFF_FACTOR = 1.6;
+const ROLL_OFF_FACTOR = 1.5; //1.6
 const ROLL_OFF_FACTOR_ZOOM = 1.0;
 const ROLL_OFF_FACTOR_SPACE = 1;
 
@@ -1005,6 +1005,12 @@ var profiler6 = 0;
 //main loop
 function animate() 
 {
+	/*console.log("active : " , document.activeElement);
+	if (document.activeElement === document.body)
+	{
+		console.log("body " + frame );
+	}
+	$/
 	frame++;
 	/*if (mode !== 'vr')
 	{
@@ -1911,7 +1917,7 @@ function createObject(o)
 			sound.setRefDistance(1);
 			if (o.talk !== undefined)
 			{
-				sound.setRolloffFactor(0.5);
+				sound.setRolloffFactor(0.7);
 			}
 			else
 			{
@@ -2845,6 +2851,8 @@ function StartDSP()
 		//Log("mousedown");
 		if (editor.hasFocus())
 			return;
+		if (document.activeElement !== document.body)
+			return;
 		//if (document.activeElement === chat_input)
 		//	return;
 			
@@ -2934,6 +2942,13 @@ function StartDSP()
 		//console.log("pressed:" + nomTouche);
 		if (editor.hasFocus())
 			return;
+		if (event.keyCode === 13 && chat_input.value !== "")
+		{
+			OnChat(chat_input.value);
+			chat_input.value = "";
+		}
+		if (document.activeElement !== document.body)
+				return;
 		switch (event.keyCode) {
 			case 38: // up
 				MovingForward = true;
@@ -2954,18 +2969,18 @@ function StartDSP()
 				}
 			break;
 			case 32: //space
-			if (!(document.activeElement === chat_input))
+			//if (!(document.activeElement === chat_input))
 			{
 				ToggleSelectionAudioPlaying();
 			}
 			break;
-			case 13: //enter
+			/*case 13: //enter
 			if ((document.activeElement === chat_input))
 			{
 				OnChat(chat_input.value);
 				chat_input.value = "";
 			}
-			break;
+			break;*/
 			case 17: //control
 				//ScriptCurrentSelection();
 				//UpdateSelection();
@@ -2974,7 +2989,7 @@ function StartDSP()
 				avatar_speed = 340;
 			break;
 			case 82: //R
-			if (!(document.activeElement === chat_input))
+			//if (!(document.activeElement === chat_input))
 			{
 				if (event.repeat === false)
 				{
