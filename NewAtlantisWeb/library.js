@@ -18,6 +18,7 @@ na_library.sounds = [
 	{name:'terre_gargouillante00',url:'sounds/banque/synthese/terre_gargouillante00.mp3'}
 ];
 
+/*
 var na_library_sound = {
 	stream_le_rove_niolon:'http://locus.creacast.com:9001/le-rove_niolon.mp3',
 	stream_acra_wave_farm:'http://locus.creacast.com:9001/acra_wave_farm.mp3',
@@ -35,6 +36,36 @@ var na_library_sound = {
 	guitar:'sounds/banque/synthese/gresillements_guitare.mp3',
 	earth:'sounds/banque/synthese/terre_gargouillante00.mp3'
 };
+*/
+
+var na_library_sound = {
+	AmbianceNuit:'sounds/banque/NEC/AmbianceNuit.mp3',
+	AmbianceNuitMystere:'sounds/banque/NEC/AmbianceNuitMystere.mp3',
+	Chuchotements01:'sounds/banque/NEC/Chuchotements01.mp3',
+	Chuchotements02:'sounds/banque/NEC/Chuchotements02.mp3',
+	Chuchotements03:'sounds/banque/NEC/Chuchotements03.mp3',
+	ChuchotementsDroite:'sounds/banque/NEC/ChuchotementsDroite.mp3',
+	ChuchotementsFemme01:'sounds/banque/NEC/ChuchotementsFemme01.mp3',
+	ChuchotementsFemme02:'sounds/banque/NEC/ChuchotementsFemme02.mp3',
+	ChuchotementsFemme03:'sounds/banque/NEC/ChuchotementsFemme03.mp3',
+	ChuchotementsGhost:'sounds/banque/NEC/ChuchotementsGhost.mp3',
+	Feuilles:'sounds/banque/NEC/Feuilles.mp3',
+	leave:'sounds/banque/NEC/leave.mp3',
+	leaves:'sounds/banque/NEC/leaves.mp3',
+	leavessound:'sounds/banque/NEC/leavessound.mp3',
+	MysteriousSound:'sounds/banque/NEC/MysteriousSound.mp3',
+	NuitETE:'sounds/banque/NEC/NuitETE.mp3',
+	Respiration:'sounds/banque/NEC/Respiration.mp3',
+	RespirationGhost:'sounds/banque/NEC/RespirationGhost.mp3',
+	Sans_titre:'sounds/banque/NEC/Sans titre.wav',
+	SonMystere:'sounds/banque/NEC/SonMystere.mp3',
+	stepleaves:'sounds/banque/NEC/stepleaves.mp3',
+	stepsleaves:'sounds/banque/NEC/stepsleaves.mp3'
+
+};
+
+
+
 
 var na_library_objects = {
 	duck:'duck',
