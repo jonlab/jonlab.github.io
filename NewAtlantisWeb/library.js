@@ -57,7 +57,6 @@ var na_library_sound = {
 	NuitETE:'sounds/banque/NEC/NuitETE.mp3',
 	Respiration:'sounds/banque/NEC/Respiration.mp3',
 	RespirationGhost:'sounds/banque/NEC/RespirationGhost.mp3',
-	Sans_titre:'sounds/banque/NEC/Sans titre.wav',
 	SonMystere:'sounds/banque/NEC/SonMystere.mp3',
 	stepleaves:'sounds/banque/NEC/stepleaves.mp3',
 	stepsleaves:'sounds/banque/NEC/stepsleaves.mp3'
