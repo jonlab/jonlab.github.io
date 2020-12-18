@@ -159,6 +159,23 @@ a, button, input, select {
 	color: #ffffff;
 }
 
+#jitsi {
+	position: absolute;
+	z-index: 1;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height:100%;
+	display: flex;
+	align-items: top;
+	justify-content: center;
+	opacity: 0.7;
+	/*background-color: #000000;*/
+	color: #ffffff;
+}
+
+
+
 #overlay > div {
 	text-align: center;
 }

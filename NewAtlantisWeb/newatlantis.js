@@ -3145,6 +3145,26 @@ postsRef.on('child_removed', function (snapshot) {
 });
 
 
+
+if (mode === 'jitsi')
+{
+	//JITSI test
+	const domain = 'meet.jit.si';
+	const jitsi_options = {
+		roomName: 'NewAtlantis',
+		width: 500,
+		height: 300,
+		parentNode: document.querySelector('#jitsi'),
+		userInfo: {
+			//email: 'email@jitsiexamplemail.com',
+			displayName: avatarname
+		}
+	};
+	const api = new JitsiMeetExternalAPI(domain, jitsi_options);
+}
+
+
+
 }
 
 
@@ -4882,3 +4902,8 @@ NA.Log = Log;
 
 var plugin = new NewAtlantisPluginTest(NA);
 //plugin_example.setBackend(NA);
+
+
+
+
+
