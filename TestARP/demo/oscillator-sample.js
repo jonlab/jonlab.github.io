@@ -94,7 +94,10 @@ OscillatorSample.prototype.toggle = function() {
 
 OscillatorSample.prototype.playNote = function() {
   
+  
   this.voltage = 0.2+Math.random()*6;
+
+  
   var freq1 = this.voltage*(this.vco1coarse + this.vco1fine);
   var freq2 = this.voltage*(this.vco2coarse + this.vco2fine);
 
