@@ -81,7 +81,7 @@ var controller_createfreesound;
 var freesound_list;
 
 //var baseurl_streamsearch = "https://locusonus.org/soundmap/list/?list=creacast";
-var baseurl_streamsearch = "https://locusonus.org/soundmap/list/?list=creacast";
+var baseurl_streamsearch = "https://locusonus.org/soundmap/list/na";
 //var baseurl_streamsearch = "https://locusonus.org/soundmap/list/";
 var controller_stream;
 var controller_createstream;
