@@ -191,6 +191,9 @@ var Inspector = function()
 	//7:15 0.0
 	//17:30 0.5
 
+	this.slider = 0.5;
+	this.color = [ 0, 128, 255 ];
+
 	//inclination = 0 top 0.5 horizon
 	this.inclination = 0.175; 
 
@@ -443,7 +446,31 @@ var Inspector = function()
   parameters = new Inspector();
 
 
+function ShowUI(visible)
+{
+	
+	var elMinimap = document.getElementById('minimap');
+	var elInfo = document.getElementById('info');
+	var elEditor = document.getElementById('editor');
+	//var elChat = document.getElementById('chat');
+	if (visible === true)
+	{
+		gui.show();
+		elInfo.style.display = "";
+		elEditor.style.display = "";
+		//elMinimap.style.display = "";
+		//elChat.style.display = "";
+	}
+	else
+	{
+		gui.hide();
+		elInfo.style.display = "none";
+		elEditor.style.display = "none";
+		//elMinimap.style.display = "none";
+		//elChat.style.display = "none";
 
+	}
+}
 
 function Log(message, color) 
 {
@@ -891,6 +918,7 @@ function updateSun() {
 	cubeCamera.update( renderer, sky );
 }
 
+parameters.azimuth = 0.7;
 updateSun();
 
 listener = new THREE.AudioListener();
@@ -1233,7 +1261,7 @@ function animate()
 		var now_total_seconds = h*3600+m*60+s;
 
 		//console.log(now_total_seconds);
-
+		now_total_seconds = 8*3600;
 		if (now_total_seconds<sunrise)
 		{
 			//before sunrise
@@ -1347,7 +1375,8 @@ function animate()
 			var dist2 = GetDistance2(target.remote, refposition);
 			if (dist2 < loading_threshold2 && !target.active)
 			{
-				target.active = true;
+				Log(target.remote.name + " ON");
+				target.active = true; //active means that the object is currenty close to the player
 				target.object3D = createObject(target.remote);
 				UpdateText(target);
 				objects.push(target.object3D);
@@ -1356,21 +1385,32 @@ function animate()
 				//scripting
 				if (target.remote.playing)
 				{
-
-					
 					var script = RunScriptOnTarget(target);
-					target.script = script; //script become active
-
-					
-
-					
+					target.script = script; //script become active	
 				}
 			}
 			else if (dist2 > loading_hysteresis2 && target.active)
 			{
+				Log(target.remote.name + " OFF");
 				DeleteObject(target.object3D);
 				target.object3D = undefined;
 				target.active = false;
+			}
+
+			if (target.remote.kind === "portal")
+			{
+				//teleportations
+				if (dist2 < 2)
+				{
+					//go to this position if available
+					if (target.poi != undefined)
+					{
+						camera.position.copy(target.poi.object3D.position);	
+						camera.quaternion.copy(target.poi.object3D.quaternion);
+						
+						Log("You have been teleported to " + target.poi.remote.name);
+					}
+				}
 			}
 		}
 	}	
@@ -1528,6 +1568,107 @@ function animate()
 	{
 		renderer.render(scene, camera);
 	}
+
+	//==================
+	//portals rendering
+	//==================
+	const gl = renderer.getContext();
+	for (var i in space_objects)
+	{
+		var o = space_objects[i];
+		//console.log("o.afx = " , o.afx);
+		//console.log("o= " , o);
+		if (o.active && o.remote.kind === "portal")
+		{
+			if (o.camera === undefined)
+			{
+				o.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 200);	
+			}
+			if (o.poi === undefined)
+			{
+				for (var j in space_objects)
+				{
+					var other = space_objects[j];
+					if (other.remote.name === o.remote.name && other.remote.kind === "poi")
+					{
+						//this is our poi
+						o.poi = other;
+						break;
+					}
+				}
+
+			}
+			
+			//renderer.clippingPlanes[0].copy(this.clippingPlane);
+			renderer.autoClearStencil = false;
+			//renderer.setScissor(this.portalViewport);
+			//renderer.setViewport(this.portalViewport);
+			renderer.autoClearColor = false;
+			//calcul de la caméra
+			let portal_camera = new THREE.Vector3();
+			//to do : ajouter un concept de portal avec une notion de source et destination
+			//portal_camera.copy() = //HERE
+			//portal_camera.set(camera.x+5, camera.y-30, camera.z+5);
+			//portal_camera.set(camera.x, camera.y, camera.z);
+			
+			
+			//const quaternion = new THREE.Quaternion();
+			//quaternion.copy(o.object3D.quaternion);
+
+			//var portalDelta=o.poi.object3D.quaternion.clone().inverse();
+			//portalDelta.multiply(o.object3D.quaternion);
+			if (o.object3D !== undefined && o.poi.object3D !== undefined)
+			{
+				//o.camera.quaternion.copy(o.poi.object3D.quaternion).multiply(portalDelta);
+				let move = o.poi.object3D.position.clone().sub(o.object3D.position.clone());
+				//apply portal translation
+				o.camera.position.set(camera.position.x+move.x, camera.position.y+move.y, camera.position.z+move.z);
+				//o.camera.position.copy(o.poi.object3D.position);
+				o.camera.quaternion.copy(o.poi.object3D.quaternion);
+				//quaternion.multiply(o.poi.object3D.quaternion.clone().inverse());
+				//o.camera.quaternion.copy(camera.quaternion);
+				//o.camera.quaternion.copy(quaternion);
+				
+				//o.camera.position.set(camera.position.x+2, camera.position.y, camera.position.z);
+				//o.camera.position.set(o.poi.object3D.position.x, o.poi.object3D.position.y, o.poi.object3D.position.z);
+				//o.remote.camera.position.copy(portal_camera);
+				//console.log("active poi: " , o);
+				//o.object3D !== undefined
+				//console.log("active poi");
+
+				//o.camera.matrixWorld = portal_view(o.camera, o.object3D, o.poi.object3D);
+
+			}
+
+
+			gl.enable(gl.STENCIL_TEST);
+			let stencilIndex = 1; //FIXME, allow multiple indexes
+			gl.stencilFunc(gl.EQUAL, stencilIndex, 0xff);
+			gl.stencilMask(0);
+			gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);			
+			renderer.render(scene, o.camera);
+			gl.disable(gl.STENCIL_TEST);
+			//renderer.clippingPlanes[0].copy(this.clippingPlane);
+			//renderer.autoClearStencil = false;
+			//renderer.setScissor(this.portalViewport);
+			//renderer.setViewport(this.portalViewport);
+			//this.mesh.visible = false;
+			//const gl = renderer.getContext();
+			//renderer.autoClearColor = false;
+			//gl.enable(gl.STENCIL_TEST);
+			//gl.stencilFunc(gl.EQUAL, this.stencilIndex, 0xff);
+			//gl.stencilMask(0);
+			//gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
+			//renderer.render(this.destinationScene, this.portalCamera);
+			//gl.disable(gl.STENCIL_TEST);
+			//this.mesh.visible = this.isOnscreen;
+		}
+	}
+
+	
+
+	//=======
+
 	profiler5 = ProfilerStop();
 	ProfilerStart();
 	UpdateLog();
@@ -1541,15 +1682,50 @@ function animate()
 	UpdateMinimap();
 	stats.end();
 	profiler6 = ProfilerStop();
-
 	//Log(""+profiler0+ " " + profiler1 + " " + profiler2 + " " + profiler3 + " " + profiler4 + " " + profiler5 + " " + profiler6);
-	
-	
 }
 
 //animate();
 renderer.setAnimationLoop(animate);
 
+
+function portal_view(camera, src_portal, dst_portal) 
+{
+	src_portal.updateMatrixWorld()
+	dst_portal.updateMatrixWorld()
+	camera.updateMatrixWorld()
+
+	var camerapos = new THREE.Vector3();
+	var camerarot = new THREE.Quaternion();
+	var camerascale = new THREE.Vector3();
+	camera.matrix.decompose(camerapos,camerarot,camerascale);
+
+	var srcpos = new THREE.Vector3();
+	var srcquat = new THREE.Quaternion();
+	var srcscale = new THREE.Vector3();
+	src_portal.matrix.decompose(srcpos, srcquat, srcscale);
+
+	var destquat = new THREE.Quaternion();
+	var destpos = new THREE.Vector3();
+	var destscale = new THREE.Vector3();
+	dst_portal.matrix.decompose(destpos,destquat,destscale);
+
+	var diff = camerapos.clone().sub(srcpos);
+
+	var ydiff = src_portal.rotation.y - dst_portal.rotation.y - Math.PI;
+	diff.applyAxisAngle(new THREE.Vector3(0,1,0),-ydiff);
+	var newcampos = diff.add(destpos);
+	var yrotvec = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),-ydiff);
+	//console.log(yrotvec)
+	srcquat = srcquat.multiply(destquat.inverse());
+
+	camerarot = camerarot.multiply(yrotvec);
+
+	var inverse_view_to_source = new THREE.Matrix4();
+	inverse_view_to_source.compose(newcampos,camerarot,camerascale);
+
+	return inverse_view_to_source;
+}
 
 function getNoise(duration)
 {
@@ -1566,9 +1742,6 @@ function getNoise(duration)
 	}
 	return buffer;
 }
-
-
-
 
 
 
@@ -1639,6 +1812,10 @@ function createObject(o)
 	{
 		geometry = new THREE.PlaneBufferGeometry( 1, 1, 1, 1 );
 	}
+	else if (o.kind === "portal")
+	{
+		geometry = new THREE.PlaneBufferGeometry( 2, 4, 1, 1 );
+	}
 	else 
 	{
 		geometry = new THREE.SphereBufferGeometry(0.5,12,6);
@@ -1663,19 +1840,73 @@ function createObject(o)
 	{
 		material = new THREE.MeshStandardMaterial({transparent:true,opacity:0.5, roughness:0.0, map: texture});
 	}
+	else if (o.kind === "portal")
+	{
+		//new poi portal type
+		material = new THREE.MeshBasicMaterial({colorWrite:true});
+	}
 	else
 	{
 		material = new THREE.MeshStandardMaterial({map: texture});
 	}
 	
 
+	if (o.kind === "portal")
+	{
+		material.side = THREE.DoubleSide;
+		//material.wireframe = true;
+		//material.wireframe = true;
+		//portal camera
+		//o.camera = new THREE.PerspectiveCamera(75, 1/1, 0.1, 10000);	
+		//o.camera.position.set(0,50,0);
+		//o.camera.lookAt(0,0,0);
+	}
 	if (o.kind === "poi")
 	{
 		material.wireframe = true;
+		//material.side = THREE.DoubleSide;
 	}
 
 
+
 	cube = new THREE.Mesh(geometry, material);
+
+
+	if (o.kind === "portal")
+	{
+		let stencilIndex = 1; //FIXME, generate a unique ID
+		cube.onBeforeRender = renderer => {
+			if (cube.visible) {
+			  const gl = renderer.getContext();
+			  gl.enable(gl.STENCIL_TEST);
+			  gl.stencilMask(0xff);
+			  gl.stencilFunc(gl.ALWAYS, stencilIndex, 0xff);
+			  gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE);
+			}
+		  };
+		  cube.onAfterRender = renderer => {
+			if (cube.visible) {
+			  // Set everything back to the way it was before
+			  const gl = renderer.getContext();
+			  gl.disable(gl.STENCIL_TEST);
+			  gl.stencilMask(0);
+			  gl.stencilFunc(gl.ALWAYS, 1, 0xff);
+			  gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
+			}
+		  };
+
+
+
+	//outline et arrière du portal
+	var geometryOutline = new THREE.PlaneBufferGeometry( 2.3, 4.3, 1, 1 );
+	var materialOutline = new THREE.MeshBasicMaterial({ color:0x00FFFF });
+	var outline = new THREE.Mesh(geometryOutline, materialOutline);
+	outline.position.z = -0.01;
+	cube.add(outline);
+
+
+	}
+
 	cube.current_texture = o.texture;
 	cube.position.x = o.x;
 	cube.position.y = o.y;
@@ -1743,7 +1974,6 @@ function createObject(o)
 				bevelOffset: 0,
 				bevelSegments: 5
 			} );
-
 			var materialText = new THREE.MeshPhongMaterial();
 			var text = new THREE.Mesh(geometryText, materialText);
 			cube.add(text);
@@ -1752,7 +1982,6 @@ function createObject(o)
 			text.rotation.y = Math.PI;
 			//console.log("text", text);
 	}
-
 	*/
 
 	if (o.kind === "light")
@@ -2336,7 +2565,10 @@ function UpdateText(o)
 			o.text = text;
 			text.scale.set(0.01,0.01,0.01);
 			text.position.y = 0.7;
-			text.rotation.y = Math.PI;
+			if (o.remote.kind !== "poi")
+			{
+				text.rotation.y = Math.PI;
+			}
 			//console.log("text", text);
 	}
 
@@ -2564,8 +2796,7 @@ document.getElementById('avatarname').value = localStorage.getItem("username");
 var elInfo = document.getElementById('info');
 var elChat = document.getElementById('chat');
 var elWebcam = document.getElementById('webcam');
-var elChatUI = document.getElementById('chat_ui');
-
+//var elChatUI = document.getElementById('chat_ui');
 var elVideo = document.createElement('video');
 elVideo.height = 200;
 elWebcam.appendChild(elVideo);
@@ -3066,7 +3297,6 @@ objectsRef.on('child_added', function (snapshot) {
 		var target = GetObjectByName(spawning_point)
 		if (target !== undefined)
 		{
-
 			UpdateLocalCamera(target);
 			//Log("success", 1);
 		}
@@ -3146,7 +3376,6 @@ postsRef.on('child_removed', function (snapshot) {
 });
 
 
-
 if (mode === 'jitsi')
 {
 	//JITSI test
@@ -3162,6 +3391,12 @@ if (mode === 'jitsi')
 		}
 	};
 	const api = new JitsiMeetExternalAPI(domain, jitsi_options);
+}
+
+else if (mode === 'view')
+{
+	//special mode with no UI
+	ShowUI(false);
 }
 
 
@@ -3597,6 +3832,11 @@ function CreateGUI()
 	
 	gui = new dat.GUI();
 	gui.add(parameters, "editMode");
+	gui.add(parameters, "slider", 0, 1).onChange(function(val){
+		console.log("slider val:" + val);
+	});
+
+	gui.addColor(parameters, 'color');
 	gui.add(parameters, 'startTutorial');
 	fAudioSources = gui.addFolder('Audio Source');
 	f3D = gui.addFolder('3D Object');
@@ -3857,6 +4097,14 @@ else if (arg === "hide")
 	ctx_minimap.canvas.style.display = "none";
 	//elSelfie.style.display = "none";
 
+	var elInfo = document.getElementById('info');
+	var elEditor = document.getElementById('editor');
+	var elChat = document.getElementById('chat');
+	//var elWebcam = document.getElementById('webcam');
+
+	elInfo.style.display = "none";
+	elEditor.style.display = "none";
+	elChat.style.display = "none";
 	return;
 }
 else if (arg === "stats")
@@ -4051,6 +4299,55 @@ else if (arg.startsWith("posts"))
 	return;
 	
 }
+else if (arg.startsWith("logspace"))
+{
+	var all = "";
+	for (var i in space_objects)
+	{
+		var o = space_objects[i];
+		console.log(o);
+		all += o.remote.kind + "\t" + o.remote.name + "\n";
+	}
+	console.log(all);
+	return;
+	
+}
+else if (arg.startsWith("info"))
+{
+	if (selection !== undefined)
+	{
+		console.log(selection);
+		//
+		if (selection.remote.kind === "portal" || selection.remote.kind === "poi")
+		{
+			let portal_count = 0;
+			let poi_count = 0;
+			for (var i in space_objects)
+			{
+				var o = space_objects[i];
+				if (o.remote.name === selection.remote.name)
+				{
+					if (o.remote.kind === "portal")
+					{
+						portal_count++;
+					}
+					else if (o.remote.kind === "poi")
+					{
+						poi_count++;
+					}
+				}
+			}
+			let output = "";
+			output += "PORTAL : " + selection.remote.name + " " + portal_count + "->" + poi_count;
+			Log(output, 0);
+
+		}
+	}
+	
+	return;
+}
+
+
 
 
 	var postData = 

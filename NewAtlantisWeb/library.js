@@ -77,7 +77,8 @@ var na_library_objects = {
 	cone:'cone',
 	island:'island',
 	light: 'light',
-	POI:"poi"
+	POI:"poi",
+	portal:"portal"
 };
 
 /*
