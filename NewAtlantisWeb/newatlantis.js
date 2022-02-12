@@ -1414,6 +1414,8 @@ function animate()
 			}
 		}
 	}	
+
+	
 	profiler2 = ProfilerStop();
 	ProfilerStart();
 	//execute scripts on objects
