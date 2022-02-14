@@ -110,6 +110,8 @@ var water;
 var sky;
 var cubeCamera;
 
+var stencilIndex = 1;
+
 var selection; //current target
 var object_selection;
 var inner_object_selection;
@@ -1039,7 +1041,7 @@ function animate()
 	{
 		console.log("body " + frame );
 	}
-	$/
+	*/
 	frame++;
 	/*if (mode !== 'vr')
 	{
@@ -1369,10 +1371,101 @@ function animate()
 	{
 		var loading_threshold2 = loading_threshold*loading_threshold;
 		var loading_hysteresis2 = (loading_threshold*1.1)*(loading_threshold*1.1);
+
+		let portals = [];
+
+
+
+		//première passe de sélection des objets dans le range
 		for (var j in space_objects)
 		{
 			var target = space_objects[j];
 			var dist2 = GetDistance2(target.remote, refposition);
+			if (dist2 < loading_threshold2)
+			{
+				target.inrange = true;
+				if (target.remote.kind === "portal")
+				{
+					portals.push(target);
+					//we get the poi this portals leads to
+					if (target.poi === undefined)
+					{
+						for (var k in space_objects)
+						{
+							var other = space_objects[k];
+							if (other.remote.name === target.remote.name && other.remote.kind === "poi")
+							{
+								//this is our poi
+								target.poi = other;
+								break;
+							}
+						}
+
+
+					}
+				}
+			}
+			else
+			{
+				target.inrange = false;
+			}
+		}
+
+		//deuxième passe, on repèche les objets correspondant aux portals
+		for (var p in portals)
+		{
+			var portal = portals[p];
+			refposition.set(portal.poi.remote.x, portal.poi.remote.y, portal.poi.remote.z);
+			//console.log("repechage poi:", portal.poi);
+			portal.poi.inrange = true; 
+			for (var j in space_objects)
+			{
+				var target = space_objects[j];
+				var dist2 = GetDistance2(target.remote, refposition);
+				if (dist2 < loading_threshold2)
+				{
+					//console.log("repechage object:", target);
+					target.inrange = true;
+				}
+			}	
+		}
+		refposition = camera.getWorldPosition(refposition);
+		for (var j in space_objects)
+		{
+			var target = space_objects[j];
+			//var dist2 = GetDistance2(target.remote, refposition);
+			if (target.inrange && !target.active)
+			{
+				Log(target.remote.name + " ON");
+				target.active = true; //active means that the object is currenty close to the player
+				target.object3D = createObject(target.remote);
+				UpdateText(target);
+				objects.push(target.object3D);
+				objects_main[target.object3D.uuid] = target;
+		
+				//scripting
+				if (target.remote.playing)
+				{
+					var script = RunScriptOnTarget(target);
+					target.script = script; //script become active	
+				}
+			}
+			else if (!target.inrange && target.active)
+			{
+				Log(target.remote.name + " OFF");
+				DeleteObject(target.object3D);
+				target.object3D = undefined;
+				target.active = false;
+			}
+
+
+
+		
+		//for (var j in space_objects)
+		//{
+			var target = space_objects[j];
+			var dist2 = GetDistance2(target.remote, refposition);
+			/*
 			if (dist2 < loading_threshold2 && !target.active)
 			{
 				Log(target.remote.name + " ON");
@@ -1397,6 +1490,8 @@ function animate()
 				target.active = false;
 			}
 
+			*/
+
 			if (target.remote.kind === "portal")
 			{
 				//teleportations
@@ -1413,7 +1508,7 @@ function animate()
 				}
 			}
 		}
-	}	
+	}
 
 	
 	profiler2 = ProfilerStop();
@@ -1584,7 +1679,7 @@ function animate()
 		{
 			if (o.camera === undefined)
 			{
-				o.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 200);	
+				o.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.5, 2000);	
 			}
 			if (o.poi === undefined)
 			{
@@ -1602,7 +1697,7 @@ function animate()
 			}
 			
 			//renderer.clippingPlanes[0].copy(this.clippingPlane);
-			renderer.autoClearStencil = false;
+			renderer.autoClearStencil = true;
 			//renderer.setScissor(this.portalViewport);
 			//renderer.setViewport(this.portalViewport);
 			renderer.autoClearColor = false;
@@ -1626,7 +1721,22 @@ function animate()
 				//apply portal translation
 				o.camera.position.set(camera.position.x+move.x, camera.position.y+move.y, camera.position.z+move.z);
 				//o.camera.position.copy(o.poi.object3D.position);
-				o.camera.quaternion.copy(o.poi.object3D.quaternion);
+				//o.camera.quaternion.copy(o.poi.object3D.quaternion);
+				o.camera.quaternion.copy(camera.quaternion);
+				let portal_inverse = new THREE.Quaternion();
+				portal_inverse.copy(o.object3D.quaternion);
+				//let portal_inverse = o.object3D.quaternion.clone();//.invert();
+				//console.log("portal_inverse=", portal_inverse);
+				portal_inverse.conjugate();
+				let diff = new THREE.Quaternion();
+				diff.multiplyQuaternions(o.poi.object3D.quaternion, portal_inverse);
+				//portal_inverse*o.poi.object3D.quaternion;
+				let portal_identity = new THREE.Quaternion();
+				//console.log("diff=", diff);
+				o.camera.quaternion.multiplyQuaternions(diff, camera.quaternion);
+				//o.camera.quaternion.copy(diff*camera.quaternion);
+				//orientation has to be the current camera orientation + the (poi-portal) orientation
+
 				//quaternion.multiply(o.poi.object3D.quaternion.clone().inverse());
 				//o.camera.quaternion.copy(camera.quaternion);
 				//o.camera.quaternion.copy(quaternion);
@@ -1642,14 +1752,17 @@ function animate()
 
 			}
 
-
-			gl.enable(gl.STENCIL_TEST);
-			let stencilIndex = 1; //FIXME, allow multiple indexes
-			gl.stencilFunc(gl.EQUAL, stencilIndex, 0xff);
-			gl.stencilMask(0);
-			gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);			
-			renderer.render(scene, o.camera);
-			gl.disable(gl.STENCIL_TEST);
+			//if (frame % 10 === 0)
+			//if (false)
+			{
+				gl.enable(gl.STENCIL_TEST);
+				let stencilIndex = o.object3D.stencilIndex; //FIXME, allow multiple indexes
+				gl.stencilFunc(gl.EQUAL, stencilIndex, 0xff);
+				gl.stencilMask(0);
+				gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);			
+				renderer.render(scene, o.camera);
+				gl.disable(gl.STENCIL_TEST);
+			}
 			//renderer.clippingPlanes[0].copy(this.clippingPlane);
 			//renderer.autoClearStencil = false;
 			//renderer.setScissor(this.portalViewport);
@@ -1872,11 +1985,11 @@ function createObject(o)
 
 
 	cube = new THREE.Mesh(geometry, material);
-
+	cube.stencilIndex = stencilIndex++;
 
 	if (o.kind === "portal")
 	{
-		let stencilIndex = 1; //FIXME, generate a unique ID
+		let stencilIndex = cube.stencilIndex; //FIXME, generate a unique ID
 		cube.onBeforeRender = renderer => {
 			if (cube.visible) {
 			  const gl = renderer.getContext();
