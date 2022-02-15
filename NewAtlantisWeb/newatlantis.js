@@ -1724,6 +1724,8 @@ function animate()
 						
 					}
 
+					
+
 					/*
 					for (var k in space_objects)
 					{
