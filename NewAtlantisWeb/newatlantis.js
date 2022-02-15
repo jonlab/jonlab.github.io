@@ -128,6 +128,10 @@ var gui;
 var parameters; //backpack
 var inputFile;
 var fogColor;
+var clipPlane = new THREE.Plane();
+const clipPlanes = [
+	new THREE.Plane( new THREE.Vector3( -1, 0, 0 ), 0 )
+];
 
 var audioRecorder; 
 var current_loop = true;
@@ -184,6 +188,7 @@ if (urlParams !== undefined)
 var Inspector = function() 
 {
 	this.editMode = false;
+	this.portals = false;
 	this.advancedMode = true;
 	this.position = "";
 	this.poi = '{"x":0,"y":1,"z":0}';
@@ -678,6 +683,8 @@ renderer.domElement.ondrop = OnDrop;
 renderer.domElement.ondragover = OnDragOver;
 renderer.xr.enabled = true;
 
+renderer.localClippingEnabled = false;
+
 control = new TransformControls( camera, renderer.domElement );
 control.space = "local";
 control.setMode( "translate" );
@@ -885,6 +892,10 @@ water = new Water(
 	}
 );
 PatchMaterial(water.material);
+water.material.clippingPlanes = clipPlanes;
+water.material.clipIntersection = true;
+
+//clippingPlanes:clipPlanes, clipIntersection:true
 water.material.uniforms.size.value = 4;
 console.log(water.material.uniforms.size.value);
 water.rotation.x = - Math.PI / 2;
@@ -1669,119 +1680,124 @@ function animate()
 	//==================
 	//portals rendering
 	//==================
-	const gl = renderer.getContext();
-	for (var i in space_objects)
+	if (parameters.portals)
 	{
-		var o = space_objects[i];
-		//console.log("o.afx = " , o.afx);
-		//console.log("o= " , o);
-		if (o.active && o.remote.kind === "portal")
+		renderer.localClippingEnabled = false;
+		const gl = renderer.getContext();
+		for (var i in space_objects)
 		{
-			if (o.camera === undefined)
+			var o = space_objects[i];
+			//console.log("o.afx = " , o.afx);
+			//console.log("o= " , o);
+			if (o.active && o.remote.kind === "portal")
 			{
-				o.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.5, 2000);	
-			}
-			if (o.poi === undefined)
-			{
-				for (var j in space_objects)
+				if (o.camera === undefined)
 				{
-					var other = space_objects[j];
-					if (other.remote.name === o.remote.name && other.remote.kind === "poi")
+					o.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.5, 2000);	
+				}
+				if (o.poi === undefined)
+				{
+					for (var j in space_objects)
 					{
-						//this is our poi
-						o.poi = other;
-						break;
+						var other = space_objects[j];
+						if (other.remote.name === o.remote.name && other.remote.kind === "poi")
+						{
+							//this is our poi
+							o.poi = other;
+							break;
+						}
 					}
+
+				}
+				
+				//renderer.clippingPlanes[0].copy(this.clippingPlane);
+				renderer.autoClearStencil = true;
+				//renderer.setScissor(this.portalViewport);
+				//renderer.setViewport(this.portalViewport);
+				renderer.autoClearColor = false;
+				//calcul de la caméra
+				let portal_camera = new THREE.Vector3();
+				//to do : ajouter un concept de portal avec une notion de source et destination
+				//portal_camera.copy() = //HERE
+				//portal_camera.set(camera.x+5, camera.y-30, camera.z+5);
+				//portal_camera.set(camera.x, camera.y, camera.z);
+				
+				
+				//const quaternion = new THREE.Quaternion();
+				//quaternion.copy(o.object3D.quaternion);
+
+				//var portalDelta=o.poi.object3D.quaternion.clone().inverse();
+				//portalDelta.multiply(o.object3D.quaternion);
+				if (o.object3D !== undefined && o.poi.object3D !== undefined)
+				{
+					//o.camera.quaternion.copy(o.poi.object3D.quaternion).multiply(portalDelta);
+					let move = o.poi.object3D.position.clone().sub(o.object3D.position.clone());
+					//apply portal translation
+					o.camera.position.set(camera.position.x+move.x, camera.position.y+move.y, camera.position.z+move.z);
+					//o.camera.position.copy(o.poi.object3D.position);
+					//o.camera.quaternion.copy(o.poi.object3D.quaternion);
+					o.camera.quaternion.copy(camera.quaternion);
+					let portal_inverse = new THREE.Quaternion();
+					portal_inverse.copy(o.object3D.quaternion);
+					//let portal_inverse = o.object3D.quaternion.clone();//.invert();
+					//console.log("portal_inverse=", portal_inverse);
+					portal_inverse.conjugate();
+					let diff = new THREE.Quaternion();
+					diff.multiplyQuaternions(o.poi.object3D.quaternion, portal_inverse);
+					//portal_inverse*o.poi.object3D.quaternion;
+					let portal_identity = new THREE.Quaternion();
+					//console.log("diff=", diff);
+					o.camera.quaternion.multiplyQuaternions(diff, camera.quaternion);
+					//o.camera.quaternion.copy(diff*camera.quaternion);
+					//orientation has to be the current camera orientation + the (poi-portal) orientation
+
+					//quaternion.multiply(o.poi.object3D.quaternion.clone().inverse());
+					//o.camera.quaternion.copy(camera.quaternion);
+					//o.camera.quaternion.copy(quaternion);
+					
+					//o.camera.position.set(camera.position.x+2, camera.position.y, camera.position.z);
+					//o.camera.position.set(o.poi.object3D.position.x, o.poi.object3D.position.y, o.poi.object3D.position.z);
+					//o.remote.camera.position.copy(portal_camera);
+					//console.log("active poi: " , o);
+					//o.object3D !== undefined
+					//console.log("active poi");
+
+					//o.camera.matrixWorld = portal_view(o.camera, o.object3D, o.poi.object3D);
+
 				}
 
+				//if (frame % 10 === 0)
+				//if (false)
+				{
+					gl.enable(gl.STENCIL_TEST);
+					console.log("stencilIndex=" + o.object3D.stencilIndex);
+					let stencilIndex = o.object3D.stencilIndex; //FIXME, allow multiple indexes
+					gl.stencilFunc(gl.EQUAL, stencilIndex, 0xff);
+					gl.stencilMask(0);
+					gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);			
+					renderer.render(scene, o.camera); 
+					gl.disable(gl.STENCIL_TEST);
+				}
+				//renderer.clippingPlanes[0].copy(this.clippingPlane);
+				//renderer.autoClearStencil = false;
+				//renderer.setScissor(this.portalViewport);
+				//renderer.setViewport(this.portalViewport);
+				//this.mesh.visible = false;
+				//const gl = renderer.getContext();
+				//renderer.autoClearColor = false;
+				//gl.enable(gl.STENCIL_TEST);
+				//gl.stencilFunc(gl.EQUAL, this.stencilIndex, 0xff);
+				//gl.stencilMask(0);
+				//gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
+				//renderer.render(this.destinationScene, this.portalCamera);
+				//gl.disable(gl.STENCIL_TEST);
+				//this.mesh.visible = this.isOnscreen;
 			}
-			
-			//renderer.clippingPlanes[0].copy(this.clippingPlane);
-			renderer.autoClearStencil = true;
-			//renderer.setScissor(this.portalViewport);
-			//renderer.setViewport(this.portalViewport);
-			renderer.autoClearColor = false;
-			//calcul de la caméra
-			let portal_camera = new THREE.Vector3();
-			//to do : ajouter un concept de portal avec une notion de source et destination
-			//portal_camera.copy() = //HERE
-			//portal_camera.set(camera.x+5, camera.y-30, camera.z+5);
-			//portal_camera.set(camera.x, camera.y, camera.z);
-			
-			
-			//const quaternion = new THREE.Quaternion();
-			//quaternion.copy(o.object3D.quaternion);
-
-			//var portalDelta=o.poi.object3D.quaternion.clone().inverse();
-			//portalDelta.multiply(o.object3D.quaternion);
-			if (o.object3D !== undefined && o.poi.object3D !== undefined)
-			{
-				//o.camera.quaternion.copy(o.poi.object3D.quaternion).multiply(portalDelta);
-				let move = o.poi.object3D.position.clone().sub(o.object3D.position.clone());
-				//apply portal translation
-				o.camera.position.set(camera.position.x+move.x, camera.position.y+move.y, camera.position.z+move.z);
-				//o.camera.position.copy(o.poi.object3D.position);
-				//o.camera.quaternion.copy(o.poi.object3D.quaternion);
-				o.camera.quaternion.copy(camera.quaternion);
-				let portal_inverse = new THREE.Quaternion();
-				portal_inverse.copy(o.object3D.quaternion);
-				//let portal_inverse = o.object3D.quaternion.clone();//.invert();
-				//console.log("portal_inverse=", portal_inverse);
-				portal_inverse.conjugate();
-				let diff = new THREE.Quaternion();
-				diff.multiplyQuaternions(o.poi.object3D.quaternion, portal_inverse);
-				//portal_inverse*o.poi.object3D.quaternion;
-				let portal_identity = new THREE.Quaternion();
-				//console.log("diff=", diff);
-				o.camera.quaternion.multiplyQuaternions(diff, camera.quaternion);
-				//o.camera.quaternion.copy(diff*camera.quaternion);
-				//orientation has to be the current camera orientation + the (poi-portal) orientation
-
-				//quaternion.multiply(o.poi.object3D.quaternion.clone().inverse());
-				//o.camera.quaternion.copy(camera.quaternion);
-				//o.camera.quaternion.copy(quaternion);
-				
-				//o.camera.position.set(camera.position.x+2, camera.position.y, camera.position.z);
-				//o.camera.position.set(o.poi.object3D.position.x, o.poi.object3D.position.y, o.poi.object3D.position.z);
-				//o.remote.camera.position.copy(portal_camera);
-				//console.log("active poi: " , o);
-				//o.object3D !== undefined
-				//console.log("active poi");
-
-				//o.camera.matrixWorld = portal_view(o.camera, o.object3D, o.poi.object3D);
-
-			}
-
-			//if (frame % 10 === 0)
-			//if (false)
-			{
-				gl.enable(gl.STENCIL_TEST);
-				let stencilIndex = o.object3D.stencilIndex; //FIXME, allow multiple indexes
-				gl.stencilFunc(gl.EQUAL, stencilIndex, 0xff);
-				gl.stencilMask(0);
-				gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);			
-				renderer.render(scene, o.camera);
-				gl.disable(gl.STENCIL_TEST);
-			}
-			//renderer.clippingPlanes[0].copy(this.clippingPlane);
-			//renderer.autoClearStencil = false;
-			//renderer.setScissor(this.portalViewport);
-			//renderer.setViewport(this.portalViewport);
-			//this.mesh.visible = false;
-			//const gl = renderer.getContext();
-			//renderer.autoClearColor = false;
-			//gl.enable(gl.STENCIL_TEST);
-			//gl.stencilFunc(gl.EQUAL, this.stencilIndex, 0xff);
-			//gl.stencilMask(0);
-			//gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
-			//renderer.render(this.destinationScene, this.portalCamera);
-			//gl.disable(gl.STENCIL_TEST);
-			//this.mesh.visible = this.isOnscreen;
 		}
+
+		
+		renderer.localClippingEnabled = false;
 	}
-
-	
-
 	//=======
 
 	profiler5 = ProfilerStop();
@@ -1949,21 +1965,23 @@ function createObject(o)
 
 	if (o.kind === "light" || o.kind === "avatar")
 	{	
-		material = new THREE.MeshBasicMaterial({ map: texture });
+		material = new THREE.MeshBasicMaterial({ map: texture, clippingPlanes:clipPlanes, clipIntersection:true });
 	}
 	else if (o.kind === "box" || o.kind === "resonator")
 	{
-		material = new THREE.MeshStandardMaterial({transparent:true,opacity:0.5, roughness:0.0, map: texture});
+		material = new THREE.MeshStandardMaterial({transparent:true,opacity:0.5, roughness:0.0, map: texture, clippingPlanes:clipPlanes, clipIntersection:true});
 	}
 	else if (o.kind === "portal")
 	{
 		//new poi portal type
-		material = new THREE.MeshBasicMaterial({colorWrite:true});
+		material = new THREE.MeshBasicMaterial({colorWrite:true, clippingPlanes:clipPlanes, clipIntersection:true});
 	}
 	else
 	{
-		material = new THREE.MeshStandardMaterial({map: texture});
+		material = new THREE.MeshStandardMaterial({map: texture, clippingPlanes:clipPlanes, clipIntersection:true});
 	}
+
+	
 	
 
 	if (o.kind === "portal")
@@ -1989,6 +2007,7 @@ function createObject(o)
 
 	if (o.kind === "portal")
 	{
+		//cube.renderOrder = 0;
 		let stencilIndex = cube.stencilIndex; //FIXME, generate a unique ID
 		cube.onBeforeRender = renderer => {
 			if (cube.visible) {
@@ -2012,9 +2031,9 @@ function createObject(o)
 
 
 
-	//outline et arrière du portal
+	//outline et arrière du portal en un seul objet
 	var geometryOutline = new THREE.PlaneBufferGeometry( 2.3, 4.3, 1, 1 );
-	var materialOutline = new THREE.MeshBasicMaterial({ color:0x00FFFF });
+	var materialOutline = new THREE.MeshBasicMaterial({ color:0x00FFFF, clippingPlanes:clipPlanes, clipIntersection:true });
 	var outline = new THREE.Mesh(geometryOutline, materialOutline);
 	outline.position.z = -0.01;
 	cube.add(outline);
@@ -2674,7 +2693,7 @@ function UpdateText(o)
 				bevelSegments: 5
 			} );
 
-			var materialText = new THREE.MeshPhongMaterial();
+			var materialText = new THREE.MeshPhongMaterial({clippingPlanes:clipPlanes, clipIntersection:true});
 			var text = new THREE.Mesh(geometryText, materialText);
 			o.object3D.add(text);
 			o.text = text;
@@ -3947,6 +3966,7 @@ function CreateGUI()
 	
 	gui = new dat.GUI();
 	gui.add(parameters, "editMode");
+	gui.add(parameters, "portals");
 	gui.add(parameters, "slider", 0, 1).onChange(function(val){
 		console.log("slider val:" + val);
 	});
@@ -5063,8 +5083,8 @@ function ProfilerStop()
 //const p = camera.getWorldPosition();
 //console.log(p);
 
-
-if (mode === 'vr')
+//let ForceSimpleWater = true;
+if (mode === 'vr' || ForceSimpleWater)
 {
 	//VR
 	//parameters.timeEnabled = false;
