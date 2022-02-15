@@ -696,6 +696,7 @@ scene.add( control );
 fogColor = new THREE.Color(0x001133);
 
 
+
 if (mode === "postprocess")
 {
 	composer = new EffectComposer( renderer );
