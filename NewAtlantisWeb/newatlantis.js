@@ -85,6 +85,8 @@ var controller_freesound;
 var controller_createfreesound;
 var freesound_list;
 
+var elStats;
+
 //var baseurl_streamsearch = "https://locusonus.org/soundmap/list/?list=creacast";
 var baseurl_streamsearch = "https://locusonus.org/soundmap/list/na";
 //var baseurl_streamsearch = "https://locusonus.org/soundmap/list/";
@@ -121,6 +123,8 @@ let dstRotationMatrix = new THREE.Matrix4();
 					let matrixPortal = new THREE.Matrix4();
 
 var stencilIndex = 1;
+
+let UIVisible = true;
 
 var selection; //current target
 var object_selection;
@@ -470,21 +474,26 @@ function ShowUI(visible)
 	var elInfo = document.getElementById('info');
 	var elEditor = document.getElementById('editor');
 	//var elChat = document.getElementById('chat');
+	var elSelfie = document.getElementById('selfie');
 	if (visible === true)
 	{
 		gui.show();
 		elInfo.style.display = "";
 		elEditor.style.display = "";
-		//elMinimap.style.display = "";
+		elMinimap.style.display = "";
+		elSelfie.style.display = "";
 		//elChat.style.display = "";
+		elStats.style.display = "";
 	}
 	else
 	{
 		gui.hide();
 		elInfo.style.display = "none";
 		elEditor.style.display = "none";
-		//elMinimap.style.display = "none";
+		elMinimap.style.display = "none";
+		elSelfie.style.display = "none";
 		//elChat.style.display = "none";
+		elStats.style.display = "none";
 
 	}
 }
@@ -678,6 +687,8 @@ if (PhysicsEnabled)
 var stats = new Stats();
 stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
 document.body.appendChild( stats.dom );
+elStats = stats.dom;
+
 
 scene = new THREE.Scene();
 camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
@@ -1724,7 +1735,7 @@ function animate()
 						
 					}
 
-					
+
 
 					/*
 					for (var k in space_objects)
@@ -2847,22 +2858,8 @@ function UpdateText(o)
 function UpdateSelection()
 {
 	PullTransformFromLocaObject(selection);
+
 	UpdateRemoteObject(selection);
-	/*if (selection !== undefined)
-	{
-		selection.remote.x = selection.object3D.position.x;
-		selection.remote.y = selection.object3D.position.y;
-		selection.remote.z = selection.object3D.position.z;
-		selection.remote.rotation.x = selection.object3D.rotation.x;
-		selection.remote.rotation.y = selection.object3D.rotation.y;
-		selection.remote.rotation.z = selection.object3D.rotation.z;
-		selection.remote.scale.x = selection.object3D.scale.x;
-		selection.remote.scale.y = selection.object3D.scale.y;
-		selection.remote.scale.z = selection.object3D.scale.z;
-		//console.log("update selection", selection);
-		firebase.database().ref('spaces/test/objects/' + selection.remote.id).set(selection.remote);
-	}
-	*/
 }
 
 
@@ -3515,6 +3512,12 @@ function StartDSP()
 			}
 			
 			break;
+			case 27: //ESC
+			UIVisible = !UIVisible;
+			ShowUI(UIVisible);
+			break;
+
+			
 		}
 	}, false);
 
@@ -3726,6 +3729,11 @@ function SelectObject(_object)
 				
 			}
 			Log("clicked on " + selection.remote.name + " :: " + object_name + " now selected!", LOG_OK);
+			//set color inspector value
+			parameters.color[0] = selection.remote.r * 255.0;
+			parameters.color[1] = selection.remote.g * 255.0;
+			parameters.color[2] = selection.remote.b * 255.0;
+			controllerColor.updateDisplay();
 
 			if (parameters.editMode && (!selection.remote.locked || selection.remote.locked === undefined))
 			{
@@ -4098,12 +4106,13 @@ function GetDistance2(object1, object2)
 }
 
 
-var fAudioSources;
-var f3D;
-var fBox;
-var fSpace;
-var fAudioSourcesFreeSound;
-var fAudioSourcesStream;
+let fAudioSources;
+let f3D;
+let fBox;
+let fSpace;
+let fAudioSourcesFreeSound;
+let fAudioSourcesStream;
+let controllerColor;
 
 function CreateGUI()
 {
@@ -4113,11 +4122,38 @@ function CreateGUI()
 	gui = new dat.GUI();
 	gui.add(parameters, "editMode");
 	gui.add(parameters, "portals");
-	gui.add(parameters, "slider", 0, 1).onChange(function(val){
+	/*gui.add(parameters, "slider", 0, 1).onChange(function(val){
 		console.log("slider val:" + val);
 	});
+	*/
 
-	gui.addColor(parameters, 'color');
+	controllerColor = gui.addColor(parameters, 'color').onChange(function(val){
+		//console.log("color val:" + val);
+		if (selection !== undefined)
+		{
+			selection.remote.r = val[0]/255.0;
+			selection.remote.g = val[1]/255.0;
+			selection.remote.b = val[2]/255.0;
+			selection.object3D.material.color.setRGB(selection.remote.r, selection.remote.g, selection.remote.b);
+			//console.log("selection.object3D:" , selection.object3D);
+			if (selection.object3D.children.length > 0)
+			{
+				for (let i in selection.object3D.children)
+				{
+					let c = selection.object3D.children[i];
+					if (c.material !== undefined)
+					{
+						//console.log("set color for children ", c);
+						c.material.color.setRGB(selection.remote.r, selection.remote.g, selection.remote.b);
+					}
+				}
+			}
+			
+			UpdateSelection();
+
+		}
+
+	});
 	gui.add(parameters, 'startTutorial');
 	fAudioSources = gui.addFolder('Audio Source');
 	f3D = gui.addFolder('3D Object');
@@ -4590,6 +4626,20 @@ else if (arg.startsWith("logspace"))
 		all += o.remote.kind + "\t" + o.remote.name + "\n";
 	}
 	console.log(all);
+	return;
+	
+}
+else if (arg.startsWith("tour"))
+{
+	var all = "";
+	for (var i in space_objects)
+	{
+		var o = space_objects[i];
+		if (o.remote.kind === "poi")
+		{
+			Log(o.remote.name, 1);
+		}
+	}
 	return;
 	
 }
