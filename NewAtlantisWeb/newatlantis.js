@@ -2183,6 +2183,7 @@ function createObject(o)
 	var geometryOutline = new THREE.PlaneBufferGeometry( 2.3, 4.3, 1, 1 );
 	var materialOutline = new THREE.MeshBasicMaterial({ color:0x00FFFF, clippingPlanes:clipPlanes, clipIntersection:true });
 	materialOutline.side = THREE.DoubleSide;
+	materialOutline.color.setRGB(o.r, o.g, o.b);
 	var outline = new THREE.Mesh(geometryOutline, materialOutline);
 	outline.position.z = -0.01;
 	cube.add(outline);
@@ -2215,7 +2216,7 @@ function createObject(o)
 		cube.scale.z = o.scale.z;
 	}
 	
-	if (o.kind !== "light" && o.kind !== "avatar")
+	if (o.kind !== "light" && o.kind !== "avatar" && o.kind !== "portal")
 	{
 		material.color.r = o.r;
 		material.color.g = o.g;
@@ -4204,7 +4205,7 @@ function CreateGUI()
 			selection.remote.r = val[0]/255.0;
 			selection.remote.g = val[1]/255.0;
 			selection.remote.b = val[2]/255.0;
-			selection.object3D.material.color.setRGB(selection.remote.r, selection.remote.g, selection.remote.b);
+			//selection.object3D.material.color.setRGB(selection.remote.r, selection.remote.g, selection.remote.b);
 			//console.log("selection.object3D:" , selection.object3D);
 			if (selection.object3D.children.length > 0)
 			{
@@ -4213,7 +4214,7 @@ function CreateGUI()
 					let c = selection.object3D.children[i];
 					if (c.material !== undefined)
 					{
-						//console.log("set color for children ", c);
+						console.log("set color for children ", c);
 						c.material.color.setRGB(selection.remote.r, selection.remote.g, selection.remote.b);
 					}
 				}
@@ -4225,7 +4226,7 @@ function CreateGUI()
 
 	});
 
-	
+
 	fInspector.add(parameters, "visual", na_library_visuals);
 controllerRefDistance = fInspector.add(parameters, "refDistance", 0.1, 10).onChange(function(val){
 		if (selection !== undefined)
