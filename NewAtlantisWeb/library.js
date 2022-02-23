@@ -81,6 +81,19 @@ var na_library_objects = {
 	portal:"portal"
 };
 
+var na_library_visuals = {
+	custom:'custom',
+	invisible:'invisible',
+	cube:'cube',
+	sphere:'sphere',
+	torus:'torus',
+	cylinder:'cylinder',
+	cone:'cone',
+	wireframe:'wireframe'
+};
+
+
+
 /*
 var na_library_ir = {
 	ir_0_entree_la_friche:'IR/0_entree_la_friche copie.wav',

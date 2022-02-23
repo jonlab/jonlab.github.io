@@ -213,7 +213,14 @@ var Inspector = function()
 	//17:30 0.5
 
 	this.slider = 0.5;
+
+
+	//this.name = "object"; //already below
+	this.selected = "";
+	this.visual = "custom";
 	this.color = [ 0, 128, 255 ];
+	this.refDistance = 1.0;
+	this.rolloffFactor = 2.0;
 
 	//inclination = 0 top 0.5 horizon
 	this.inclination = 0.175; 
@@ -2303,8 +2310,8 @@ function createObject(o)
 			Log("PD patch loading exception:" + exception, LOG_ERROR);
 			console.log("PD patch loading exception:", exception);
 		}
-		sound.setRefDistance( 1 );
-		sound.setRolloffFactor(ROLL_OFF_FACTOR);
+		//sound.setRefDistance( 1 );
+		//sound.setRolloffFactor(ROLL_OFF_FACTOR);
 		sound.setDistanceModel("exponential");
 		sound.play();
 		cube.add(sound);
@@ -2421,7 +2428,7 @@ function createObject(o)
 			}
 			);
 			sound.setRefDistance(1);
-			if (o.talk !== undefined)
+			/*if (o.talk !== undefined)
 			{
 				sound.setRolloffFactor(0.7);
 			}
@@ -2429,6 +2436,7 @@ function createObject(o)
 			{
 				sound.setRolloffFactor(ROLL_OFF_FACTOR);
 			}
+			*/
 			sound.setMaxDistance(10000);
 			sound.panner.panningModel = 'equalpower';
 			//sound.panner.panningModel = 'HRTF'; //do not use this one, very expensive
@@ -2446,8 +2454,8 @@ function createObject(o)
 				Log("loaded IR " + o.ir, LOG_INFO);
 				cube.convolver.buffer = buffer;
 			});
-			sound.setRefDistance( 1 );
-			sound.setRolloffFactor(ROLL_OFF_FACTOR_SPACE);
+			//sound.setRefDistance( 1 );
+			//sound.setRolloffFactor(ROLL_OFF_FACTOR_SPACE);
 			sound.setDistanceModel("exponential");
 			cube.convolver.connect( sound.listener.getInput() ); //connect to output
 		}	
@@ -2548,8 +2556,8 @@ function createObject(o)
 			}
 			else if (o.fx === "waveshaper")
 				cube.fx = audioContext.createWaveShaper();
-			sound.setRefDistance(1);
-			sound.setRolloffFactor(ROLL_OFF_FACTOR);
+			//sound.setRefDistance(1);
+			//sound.setRolloffFactor(ROLL_OFF_FACTOR);
 			sound.setDistanceModel("exponential");
 			if (cube.fx !== undefined)
 			{
@@ -2582,6 +2590,33 @@ function createObject(o)
 				console.error( error );
 			} );
 		}
+
+		//configured ref distance and rolloff factor for sound
+		if (o.rd !== undefined)
+		{
+			sound.setRefDistance(o.rd);
+		}
+		else
+		{
+			sound.setRefDistance(1);
+			o.rd = 1;
+		}
+
+		if (o.ro !== undefined)
+		{
+			sound.setRolloffFactor(o.ro);
+		}
+		else
+		{
+			sound.setRolloffFactor(ROLL_OFF_FACTOR);
+			o.ro = ROLL_OFF_FACTOR;
+
+		}
+		
+
+
+
+
 		cube.add(sound);
 		cube.audio = sound;
 	}
@@ -3714,13 +3749,13 @@ function SelectObject(_object)
 			}
 			if (last_selection !== undefined && (last_selection.remote.kind === "sound" || last_selection.remote.kind === "resonator"))
 			{
-				last_selection.object3D.audio.setRolloffFactor(ROLL_OFF_FACTOR);
+				//last_selection.object3D.audio.setRolloffFactor(ROLL_OFF_FACTOR);
 			}
 
 			if (selection.remote.kind === "sound" || selection.remote.kind === "resonator")
 			{
 				//zoom effect
-				selection.object3D.audio.setRolloffFactor(ROLL_OFF_FACTOR_ZOOM);
+				//selection.object3D.audio.setRolloffFactor(ROLL_OFF_FACTOR_ZOOM);
 			}
 			if (selection.remote.kind === "sound")
 			{
@@ -3729,12 +3764,19 @@ function SelectObject(_object)
 				
 			}
 			Log("clicked on " + selection.remote.name + " :: " + object_name + " now selected!", LOG_OK);
+			parameters.selected = selection.remote.name;
+			controllerSelected.updateDisplay();
+
+			
 			//set color inspector value
 			parameters.color[0] = selection.remote.r * 255.0;
 			parameters.color[1] = selection.remote.g * 255.0;
 			parameters.color[2] = selection.remote.b * 255.0;
 			controllerColor.updateDisplay();
-
+			parameters.refDistance = selection.remote.rd;
+			controllerRefDistance.updateDisplay();
+			parameters.rolloffFactor = selection.remote.ro;
+			controllerRolloffFactor.updateDisplay();
 			if (parameters.editMode && (!selection.remote.locked || selection.remote.locked === undefined))
 			{
 				//Log("ObjectDrag locked=" + selection.remote.locked);
@@ -3829,7 +3871,7 @@ function DeselectObject()
 	MouseDrag = true;
 	if (selection !== undefined && (selection.remote.kind === "sound" || selection.remote.kind === "resonator"))
 	{
-		selection.object3D.audio.setRolloffFactor(ROLL_OFF_FACTOR);
+		//selection.object3D.audio.setRolloffFactor(ROLL_OFF_FACTOR);
 	}
 	editor.setValue("");
 }
@@ -4110,9 +4152,13 @@ let fAudioSources;
 let f3D;
 let fBox;
 let fSpace;
+let fInspector;
 let fAudioSourcesFreeSound;
 let fAudioSourcesStream;
+let controllerSelected;
 let controllerColor;
+let controllerRolloffFactor;
+let controllerRefDistance;
 
 function CreateGUI()
 {
@@ -4127,7 +4173,31 @@ function CreateGUI()
 	});
 	*/
 
-	controllerColor = gui.addColor(parameters, 'color').onChange(function(val){
+
+
+	
+	gui.add(parameters, 'startTutorial');
+	fInspector = gui.addFolder('Inspector');
+	fAudioSources = gui.addFolder('Audio Source');
+	f3D = gui.addFolder('3D Object');
+	fBox = gui.addFolder('Box (modifier)');
+	fSpace = gui.addFolder('Space (resonator)');
+	
+
+
+
+	var fSky = gui.addFolder( 'Sky' );
+	fSky.add( parameters, 'inclination', 0, 0.5, 0.0001 ).onChange( updateSun );
+	fSky.add( parameters, 'azimuth', 0, 1, 0.0001 ).onChange( updateSun ).listen();
+	fSky.add( parameters, 'timeEnabled');
+
+
+
+
+	controllerSelected = fInspector.add(parameters, 'selected').onChange(function(val){
+	});
+
+	controllerColor = fInspector.addColor(parameters, 'color').onChange(function(val){
 		//console.log("color val:" + val);
 		if (selection !== undefined)
 		{
@@ -4154,18 +4224,31 @@ function CreateGUI()
 		}
 
 	});
-	gui.add(parameters, 'startTutorial');
-	fAudioSources = gui.addFolder('Audio Source');
-	f3D = gui.addFolder('3D Object');
-	fBox = gui.addFolder('Box (modifier)');
-	fSpace = gui.addFolder('Space (resonator)');
+
+	fInspector.add(parameters, "visual", na_library_visuals);
+controllerRefDistance = fInspector.add(parameters, "refDistance", 0.1, 10).onChange(function(val){
+		if (selection !== undefined)
+		{
+			console.log("refDistance val:" + val);
+			selection.remote.rd = val;
+			selection.object3D.audio.setRefDistance(val);
+			UpdateSelection();
+		}
+	});
+	controllerRolloffFactor = fInspector.add(parameters, "rolloffFactor", 1, 4).onChange(function(val){
+		console.log("rolloffFactor val:" + val);
+		if (selection !== undefined)
+		{
+			console.log("rolloffFactor val:" + val);
+			selection.remote.ro = val;
+			selection.object3D.audio.setRolloffFactor(val);
+			UpdateSelection();
+		}
+	});
+
+	
 
 
-
-	var fSky = gui.addFolder( 'Sky' );
-	fSky.add( parameters, 'inclination', 0, 0.5, 0.0001 ).onChange( updateSun );
-	fSky.add( parameters, 'azimuth', 0, 1, 0.0001 ).onChange( updateSun ).listen();
-	fSky.add( parameters, 'timeEnabled');
 	
 	var fAudioSourcesFile = fAudioSources.addFolder("Samples");
 	fAudioSourcesFile.add(parameters, "source", na_library_sound);
@@ -4568,6 +4651,30 @@ else if (arg.startsWith("play"))
 		//Log("audio started!", 2);
 		target.remote.aplaying = true;
 		UpdateRemoteObject(target);
+	}
+	return;
+}
+else if (arg.startsWith("rd"))
+{
+	var res = arg.split(' ');
+	var distance = Number(res[1]);
+	var target;
+	if (name === undefined || name === "")
+	{
+		target = selection;
+	}
+	else
+	{
+		console.log("looking for ", name);
+		target = GetActiveObjectByName(name)
+	}
+	if (target !== undefined && target.object3D !== undefined)
+	{
+		//target.object3D.audio.play();
+		//Log("audio started!", 2);
+		//target.remote.aplaying = true;
+		//UpdateRemoteObject(target);
+		target.object3D.audio.setRefDistance(distance);
 	}
 	return;
 }
