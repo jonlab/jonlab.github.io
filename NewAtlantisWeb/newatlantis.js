@@ -4225,6 +4225,7 @@ function CreateGUI()
 
 	});
 
+	
 	fInspector.add(parameters, "visual", na_library_visuals);
 controllerRefDistance = fInspector.add(parameters, "refDistance", 0.1, 10).onChange(function(val){
 		if (selection !== undefined)
