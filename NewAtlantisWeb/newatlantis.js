@@ -1446,6 +1446,7 @@ function animate()
 			}
 		}
 
+		
 		//deuxième passe, on repèche les objets correspondant aux portals (proches du POI linké)
 		for (var p in portals)
 		{
