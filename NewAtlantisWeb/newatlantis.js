@@ -1446,21 +1446,24 @@ function animate()
 			}
 		}
 
-		//deuxième passe, on repèche les objets correspondant aux portals
+		//deuxième passe, on repèche les objets correspondant aux portals (proches du POI linké)
 		for (var p in portals)
 		{
 			var portal = portals[p];
-			refposition.set(portal.poi.remote.x, portal.poi.remote.y, portal.poi.remote.z);
-			//console.log("repechage poi:", portal.poi);
-			portal.poi.inrange = true; 
-			for (var j in space_objects)
+			if (portal.poi !== undefined)
 			{
-				var target = space_objects[j];
-				var dist2 = GetDistance2(target.remote, refposition);
-				if (dist2 < loading_threshold2)
+				refposition.set(portal.poi.remote.x, portal.poi.remote.y, portal.poi.remote.z);
+				//console.log("repechage poi:", portal.poi);
+				portal.poi.inrange = true; 
+				for (var j in space_objects)
 				{
-					//console.log("repechage object:", target);
-					target.inrange = true;
+					var target = space_objects[j];
+					var dist2 = GetDistance2(target.remote, refposition);
+					if (dist2 < loading_threshold2)
+					{
+						//console.log("repechage object:", target);
+						target.inrange = true;
+					}
 				}
 			}	
 		}
