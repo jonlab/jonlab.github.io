@@ -1161,9 +1161,10 @@ function animate()
 			//actions
 
 
-			for (var i in gamepad_buttons)
+			for (var i in pad.buttons)
 			{
 				var b = gamepad_buttons[i];
+
 				var c = pad.buttons[i].pressed;
 				if (c && !b.laststate)
 					b.pressed = true;
@@ -1187,6 +1188,7 @@ function animate()
 
 			}
 
+
 			//high speed
 			if (gamepad_buttons[5].pressed)
 			{
@@ -1198,8 +1200,9 @@ function animate()
 			}
 
 			//selection + drag
-			if (gamepad_buttons[0].pressed)
+			if (gamepad_buttons[gamepad_button_cross].pressed)
 			{
+				Log("gamepad cross");
 				raycaster.setFromCamera( new THREE.Vector2(0,0), camera );
 				var intersections = raycaster.intersectObjects( objects, true );
 				//console.log("intersection=" , intersections);
@@ -1216,9 +1219,9 @@ function animate()
 				}
 				
 			}
-			else if (gamepad_buttons[0].released)
+			else if (gamepad_buttons[gamepad_button_cross].released)
 			{
-
+				
 				MouseDrag = false;
 				ObjectDrag = false;
 				if (object_selection !== undefined)
@@ -1229,25 +1232,44 @@ function animate()
 				}
 			}
 
-			if (gamepad_buttons[1].pressed)
+			if (gamepad_buttons[gamepad_button_circle].pressed)
 			{
+				Log("gamepad circle");
 				audioRecorder.startRecording();
 				Log("recording started...", LOG_ERROR);
+				
 			}
-			else if (gamepad_buttons[1].released)
+			else if (gamepad_buttons[gamepad_button_circle].released)
 			{
 				audioRecorder.finishRecording();
 				Log("recording stopped...", LOG_WARNING);
 			}
 
 			//start/stop current selection audio source
-			if (gamepad_buttons[2].pressed)
+			if (gamepad_buttons[gamepad_button_square].pressed)
 			{
 				//start stop
 				ToggleSelectionAudioPlaying();
+				Log("gamepad square");
 			}
 			
 
+			if (gamepad_buttons[gamepad_button_up].pressed)
+			{
+				Log("gamepad up");
+			}
+			if (gamepad_buttons[gamepad_button_down].pressed)
+			{
+				Log("gamepad down");
+			}
+			if (gamepad_buttons[gamepad_button_left].pressed)
+			{
+				Log("gamepad left");
+			}
+			if (gamepad_buttons[gamepad_button_right].pressed)
+			{
+				Log("gamepad right");
+			}
 
 
 
@@ -3099,6 +3121,18 @@ inputFileModel.id = '3d';
 inputFileModel.onchange = openFileModel;
 
 
+const gamepad_button_cross = 0;
+const gamepad_button_circle = 1;
+const gamepad_button_square = 2;
+const gamepad_button_triangle = 3;
+
+const gamepad_button_up = 12;
+const gamepad_button_down = 13;
+const gamepad_button_left = 14;
+const gamepad_button_right = 15;
+
+
+
 var gamepad_connected = false;
 var gamepad_calibrated = false;
 var pad_movex_center = 0;
@@ -4234,7 +4268,7 @@ function CreateGUI()
 
 
 	fInspector.add(parameters, "visual", na_library_visuals);
-controllerRefDistance = fInspector.add(parameters, "refDistance", 0.1, 10).onChange(function(val){
+	controllerRefDistance = fInspector.add(parameters, "refDistance", 0.1, 10).onChange(function(val){
 		if (selection !== undefined)
 		{
 			console.log("refDistance val:" + val);
