@@ -965,6 +965,7 @@ function updateSun() {
 parameters.azimuth = 0.7;
 updateSun();
 
+
 listener = new THREE.AudioListener();
 camera.add(listener);
 audioContext = listener.context;
