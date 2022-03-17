@@ -214,6 +214,36 @@ a, button, input, select {
 	color: #ffffff;
 }
 
+#tool {
+	position: absolute;
+	z-index: 2;
+	top: 0px;
+	left: 40%;
+	width: 20%;
+	height:20px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	opacity: 0.8;
+	/*background-color: #000000;*/
+	color: #ffffff;
+}
+
+#item {
+	position: absolute;
+	z-index: 2;
+	top: 20px;
+	left: 40%;
+	width: 20%;
+	height:20px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	opacity: 0.8;
+	/*background-color: #000000;*/
+	color: #aaaaaa;
+}
+
 #selfie {
 	position: absolute;
 	z-index: 2;

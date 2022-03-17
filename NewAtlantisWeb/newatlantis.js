@@ -174,6 +174,11 @@ var loading_threshold = 200;
 
 var spawning_point="";
 
+//toolbox
+var current_tool = 0;
+
+
+
 var dt = 0; //current delta time
 var audio_notification = new Audio("sounds/poc.wav");
 audio_notification.loop = false;
@@ -966,6 +971,7 @@ audioContext = listener.context;
 
 Log("listener SR="+audioContext.sampleRate);
 
+updateToolbox();
 
 /*
 var compressor = audioContext.createDynamicsCompressor();
@@ -1219,6 +1225,11 @@ function animate()
 				}
 				
 			}
+			else if (gamepad_buttons[gamepad_button_triangle].pressed)
+			{
+				UIVisible = !UIVisible;
+				ShowUI(UIVisible);
+			}
 			else if (gamepad_buttons[gamepad_button_cross].released)
 			{
 				
@@ -1249,26 +1260,55 @@ function animate()
 			if (gamepad_buttons[gamepad_button_square].pressed)
 			{
 				//start stop
-				ToggleSelectionAudioPlaying();
+				//ToggleSelectionAudioPlaying();
 				Log("gamepad square");
+
+				//depending on current tool
+
+				if (na_toolbox[current_tool].name === "sample")
+				{
+					let url = na_toolbox[current_tool].items[na_toolbox[current_tool].current].data;
+					ActionSound(url, "noname");
+				}
+				else if (na_toolbox[current_tool].name === "stream")
+				{
+					let url = na_toolbox[current_tool].items[na_toolbox[current_tool].current].data;
+					ActionStream(url, "noname");
+				}
+				else if (na_toolbox[current_tool].name === "object")
+				{
+					let kind = na_toolbox[current_tool].items[na_toolbox[current_tool].current].data;
+					ActionObject(kind, "noname");
+				}
+
+
+
 			}
 			
 
 			if (gamepad_buttons[gamepad_button_up].pressed)
 			{
-				Log("gamepad up");
+				Log("gamepad up : next tool");
+				//tool ++;
+				toolIncrement(1);
 			}
 			if (gamepad_buttons[gamepad_button_down].pressed)
 			{
-				Log("gamepad down");
+				Log("gamepad down : previous tool");
+				//tool --;
+				toolIncrement(-1);
 			}
 			if (gamepad_buttons[gamepad_button_left].pressed)
 			{
-				Log("gamepad left");
+				Log("gamepad left : previous item");
+				toolItemIncrement(-1);
+				//conf--
 			}
 			if (gamepad_buttons[gamepad_button_right].pressed)
 			{
-				Log("gamepad right");
+				Log("gamepad right : next item");
+				toolItemIncrement(1);
+				//conf++
 			}
 
 
@@ -1989,6 +2029,39 @@ function animate()
 //animate();
 renderer.setAnimationLoop(animate);
 
+function toolIncrement(inc)
+{
+	current_tool += inc;
+	if (current_tool < 0)
+		current_tool += 3;
+	else if (current_tool > 2)
+		current_tool -= 3;
+	
+	updateToolbox();
+	
+}
+function toolItemIncrement(inc)
+{
+	na_toolbox[current_tool].current += inc;
+	if (na_toolbox[current_tool].current < 0)
+	{
+		na_toolbox[current_tool].current = 0;
+	}
+	if (na_toolbox[current_tool].current > na_toolbox[current_tool].items.length-1)
+	{
+		na_toolbox[current_tool].current = na_toolbox[current_tool].items.length-1;
+	}
+	updateToolbox();
+	
+}
+
+function updateToolbox(inc)
+{
+	var elTools = document.getElementById('tool');
+	elTools.innerText = na_toolbox[current_tool].name;
+	var elItem = document.getElementById('item');
+	elItem.innerText = na_toolbox[current_tool].items[na_toolbox[current_tool].current].name ;
+}
 
 function portal_view(camera, src_portal, dst_portal) 
 {
@@ -3558,6 +3631,7 @@ function StartDSP()
 			{
 				ToggleSelectionAudioPlaying();
 			}
+			
 			break;
 			/*case 13: //enter
 			if ((document.activeElement === chat_input))

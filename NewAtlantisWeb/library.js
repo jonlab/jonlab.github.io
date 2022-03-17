@@ -66,6 +66,43 @@ var na_library_sound = {
 
 
 
+var na_toolbox = [
+	{
+		name:"object", 
+		items:[
+			{name:"SPHERE", data:"sphere"}, 
+			{name:"CUBE", data:"cube"},
+			{name:"DUCK", data:"duck"},
+
+		], 
+		current:0
+	},
+	{
+		name:"sample", 
+		items:[
+			{name:"Feuilles", data:"sounds/banque/NEC/Feuilles.mp3"},
+			{name:"ambianceNuit", data:"sounds/banque/NEC/AmbianceNuit.mp3"} ,
+			{name:"SonMystere", data:"sounds/banque/NEC/SonMystere.mp3"} 
+
+		], 
+		current:0
+	},
+	{
+		name:"stream", 
+		items:[
+			{name:"Marseille Frioul", data:"https://locus.creacast.com:9443/marseille_frioul.mp3"}, 
+			{name:"Cyber Forest", data:"http://mp3s.nc.u-tokyo.ac.jp/Fuji_CyberForest.mp3"}
+		], 
+		current:0
+	},
+	
+];
+
+
+
+
+
+
 var na_library_objects = {
 	duck:'duck',
 	cube:'cube',
