@@ -8,6 +8,9 @@ import { VRButton } from './examples/jsm/webxr/VRButton.js';
 import { XRControllerModelFactory } from './examples/jsm/webxr/XRControllerModelFactory.js';
 import { EffectComposer } from './examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from './examples/jsm/postprocessing/RenderPass.js';
+import { MaskPass } from './examples/jsm/postprocessing/MaskPass.js';
+import { ClearPass } from './examples/jsm/postprocessing/ClearPass.js';
+import { ClearMaskPass } from './examples/jsm/postprocessing/MaskPass.js';
 import { ShaderPass } from './examples/jsm/postprocessing/ShaderPass.js';
 import { GlitchPass } from './examples/jsm/postprocessing/GlitchPass.js';
 import { RGBShiftShader } from './examples/jsm/shaders/RGBShiftShader.js';
@@ -17,6 +20,7 @@ import { HalftonePass } from './examples/jsm/postprocessing/HalftonePass.js';
 import { OutlinePass } from './examples/jsm/postprocessing/OutlinePass.js';
 import { LuminosityShader } from './examples/jsm/shaders/LuminosityShader.js';
 import { SobelOperatorShader } from './examples/jsm/shaders/SobelOperatorShader.js';
+import { CopyShader } from './examples/jsm/shaders/CopyShader.js';
 import { InvertShader } from './shaders/InvertShader.js';
 
 /*
@@ -96,6 +100,7 @@ var stream_list;
 
 
 var scene; //Three js 3D scene
+var sceneMask;
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
 var composer;
@@ -184,6 +189,7 @@ var audio_notification = new Audio("sounds/poc.wav");
 audio_notification.loop = false;
 //VR
 var mode = "";
+var jitsi = "";
 var controller1, controller2;
 var controllerGrip1, controllerGrip2;
 
@@ -198,6 +204,7 @@ if (urlParams !== undefined)
 	spawning_point = urlParams.get('spawn')
 	console.log("spawning_point=" + spawning_point);
 	mode = urlParams.get('mode')
+	jitsi = urlParams.get('jitsi')
 }
 
 
@@ -207,7 +214,7 @@ if (urlParams !== undefined)
 var Inspector = function() 
 {
 	this.editMode = false;
-	this.portals = false;
+	this.portals = true;
 	this.advancedMode = true;
 	this.position = "";
 	this.poi = '{"x":0,"y":1,"z":0}';
@@ -487,6 +494,7 @@ function ShowUI(visible)
 	var elEditor = document.getElementById('editor');
 	//var elChat = document.getElementById('chat');
 	var elSelfie = document.getElementById('selfie');
+	var elJitsi = document.getElementById('jitsi');
 	if (visible === true)
 	{
 		gui.show();
@@ -496,6 +504,7 @@ function ShowUI(visible)
 		elSelfie.style.display = "";
 		//elChat.style.display = "";
 		elStats.style.display = "";
+		elJitsi.style.display = "none";
 	}
 	else
 	{
@@ -506,6 +515,7 @@ function ShowUI(visible)
 		elSelfie.style.display = "none";
 		//elChat.style.display = "none";
 		elStats.style.display = "none";
+		elJitsi.style.display = "";
 
 	}
 }
@@ -701,8 +711,8 @@ stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
 document.body.appendChild( stats.dom );
 elStats = stats.dom;
 
-
 scene = new THREE.Scene();
+sceneMask = new THREE.Scene();
 camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
 scene.add(camera);
 renderer = new THREE.WebGLRenderer();
@@ -732,23 +742,96 @@ fogColor = new THREE.Color(0x001133);
 
 if (mode === "postprocess")
 {
-	composer = new EffectComposer( renderer );
-	var renderPass = new RenderPass( scene, camera );
-	composer.addPass( renderPass );
-
-	postprocess.effectGrayScale = new ShaderPass( LuminosityShader );
-	composer.addPass( postprocess.effectGrayScale );
+	const rtParameters = {
+		stencilBuffer: true
+	};
 	
+	renderer.autoClear = false;
+	//composer = new EffectComposer( renderer, new THREE.WebGLRenderTarget( 320, 200, rtParameters ) );
+	composer = new EffectComposer( renderer, new THREE.WebGLRenderTarget( window.innerWidth, window.innerHeight) );
+	const clearPass = new ClearPass();
+	const clearMask = new ClearMaskPass();
+	const renderMask = new MaskPass( sceneMask, camera );
+	//renderMask.clear = false;
+	const renderModel = new RenderPass( sceneMask, camera );
+	renderModel.clear = false;
+	const renderPass = new RenderPass( scene, camera );
+	renderPass.clear = true;
+	const renderMaskInverse = new MaskPass( sceneMask, camera );
+	renderMaskInverse.inverse = true;
+	//renderMaskInverse.clear = false;
+	postprocess.effectGrayScale = new ShaderPass( LuminosityShader );
+	var effectCopy = new ShaderPass(CopyShader);
+	effectCopy.renderToScreen = true;
+
 	postprocess.effectSobel = new ShaderPass( SobelOperatorShader );
 	postprocess.effectSobel.uniforms[ 'resolution' ].value.x = window.innerWidth * window.devicePixelRatio;
 	postprocess.effectSobel.uniforms[ 'resolution' ].value.y = window.innerHeight * window.devicePixelRatio;
-	composer.addPass( postprocess.effectSobel );
-	postprocess.effectSobel.enabled =  false;
-
+	
 	postprocess.invertShader = new ShaderPass( InvertShader );
-	composer.addPass( postprocess.invertShader );
-	postprocess.invertShader.enabled =  false;
 
+	//CLEAR
+	composer.addPass( clearPass ); //clear
+	//RENDER MASK
+	//composer.addPass( renderMask );
+	composer.addPass( clearMask );
+	composer.addPass( renderPass ); //RENDER REGULAR SCENE (water, objects, everything)
+	//composer.addPass( clearMask ); //clear masking
+	composer.addPass( renderMaskInverse ); //RENDER MASK INVERSE (everything except colored objects)
+	//composer.addPass( renderMask );
+	
+	composer.addPass( postprocess.effectGrayScale ); //grayscale all
+	//composer.addPass( renderMask ); //mask
+	//composer.addPass( renderModel );  //render only colored stuffs
+	
+
+	//composer.addPass( renderMask );
+	//composer.addPass( postprocess.effectGrayScale ); //grayscale all
+	//composer.addPass( renderMaskInverse ); //RENDER MASK INVERSE (everything except colored objects)
+	//composer.addPass( clearPass ); //clear (clears everything even if we have masking)
+	//composer.addPass( renderPass ); //RENDER REGULAR SCENE (water, objects, everything)
+	//composer.addPass( renderMask ); //mask
+	//composer.addPass( renderModel );  //render only colored stuffs
+	//composer.addPass( renderPass ); //RENDER REGULAR SCENE (water, objects, everything)
+	
+	//
+	//
+
+	
+	
+
+	//
+	
+	
+	//const clearMask = new ClearMaskPass();
+	//composer.addPass( clearMask );
+
+	//RENDER MASK
+	//const renderMask = new MaskPass( sceneMask, camera );
+	//composer.addPass( renderMask );
+
+	//RENDER REGULAR SCENE
+	//const renderPassFinal = new RenderPass( scene, camera );
+	//composer.addPass( renderPassFinal );
+	//renderPassFinal.clear = false;
+
+	//renderer.autoClear = false;
+	
+	composer.addPass( postprocess.effectSobel );
+	postprocess.effectSobel.enabled =  true;
+	
+
+	
+	composer.addPass( postprocess.invertShader );
+	postprocess.invertShader.enabled =  true;
+	
+
+	//we have to finish the compositing with a clear mask and copy step
+	composer.addPass( clearMask ); //clear masking
+	composer.addPass( effectCopy ); //copy to screen
+	
+
+	/*
 	postprocess.glitchPass = new GlitchPass();
 	composer.addPass( postprocess.glitchPass );
 	postprocess.glitchPass.enabled =  false;
@@ -775,7 +858,10 @@ if (mode === "postprocess")
 	postprocess.rgbShiftShader.uniforms[ 'amount' ].value = 0.0015;
 	composer.addPass( postprocess.rgbShiftShader );
 	postprocess.rgbShiftShader.enabled = false;
+	*/
+
 	
+
 }
 
 //scene.background = fogColor;
@@ -899,6 +985,7 @@ light.shadow.bias = 0.0001;
 light.shadow.mapSize.width = 1024;
 light.shadow.mapSize.height = 1024;
 scene.add(light);
+sceneMask.add(light);
 
 var axesHelper = new THREE.AxesHelper(1);
 scene.add(axesHelper);
@@ -932,6 +1019,7 @@ console.log(water.material.uniforms.size.value);
 water.rotation.x = - Math.PI / 2;
 water.position.y = 0;
 scene.add( water );
+//sceneMask.add(water);
 if (PhysicsEnabled)
 	physics.addMesh( water);
 
@@ -1762,6 +1850,8 @@ function animate()
 	if (mode === "postprocess")
 	{
 		composer.render(scene, camera);
+		//renderer.clearDepth(); 
+		//renderer.render(sceneMask, camera);
 	}
 	else
 	{
@@ -1786,7 +1876,8 @@ function animate()
 					if (o.renderTarget === undefined)
 					{
 						console.log("create render target for " + o.remote.name);
-						o.renderTarget = new THREE.WebGLRenderTarget(256, 512);
+						o.renderTarget = new THREE.WebGLRenderTarget(256, 512, {format:THREE.RGBAFormat});
+						//console.log(o.renderTarget.texture.
 						
 						for (var k in space_objects)
 						{
@@ -2289,6 +2380,15 @@ function createObject(o)
 	cube.add(outline);
 
 
+	var outlineMask = new THREE.Mesh(geometryOutline, materialOutline);
+	var rootMask = new THREE.Group();
+	rootMask.position.set(o.x, o.y, o.z);
+	rootMask.rotation.set(o.rotation.x, o.rotation.y, o.rotation.z);
+
+	rootMask.add(outlineMask);
+	sceneMask.add(rootMask);
+	
+
 	}
 
 	cube.current_texture = o.texture;
@@ -2331,8 +2431,12 @@ function createObject(o)
 	}
 	
 	//material.color.setHex(Math.random() * 0xffffff );
+	
+	//object can be only in one scene
+	//sceneMask.add(cube.clone());
+	//sceneMask.add(cube);
+	//HEREMASK
 	scene.add(cube);
-
 	
 	/*
 	var display_text = "";
@@ -3666,6 +3770,7 @@ function StartDSP()
 			case 27: //ESC
 			UIVisible = !UIVisible;
 			ShowUI(UIVisible);
+
 			break;
 
 			
@@ -3810,7 +3915,8 @@ postsRef.on('child_removed', function (snapshot) {
 });
 
 
-if (mode === 'jitsi')
+//if (mode === 'jitsi')
+if (jitsi === 'true')
 {
 	//JITSI test
 	const domain = 'meet.jit.si';
@@ -3832,6 +3938,9 @@ else if (mode === 'view')
 	//special mode with no UI
 	ShowUI(false);
 }
+
+UIVisible = false;
+ShowUI(UIVisible);
 
 
 
