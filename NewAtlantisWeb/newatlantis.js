@@ -129,7 +129,8 @@ let dstRotationMatrix = new THREE.Matrix4();
 
 var stencilIndex = 1;
 
-let UIVisible = true;
+let UIVisible = false;
+let JitsiVisible = false;
 
 var selection; //current target
 var object_selection;
@@ -486,6 +487,20 @@ var Inspector = function()
   parameters = new Inspector();
 
 
+
+function ShowJitsi(visible)
+{
+	var elJitsi = document.getElementById('jitsi');
+	if (visible === true)
+	{
+		elJitsi.style.display = "";
+	}
+	else
+	{
+		elJitsi.style.display = "none";
+	}
+}
+
 function ShowUI(visible)
 {
 	
@@ -494,7 +509,7 @@ function ShowUI(visible)
 	var elEditor = document.getElementById('editor');
 	//var elChat = document.getElementById('chat');
 	var elSelfie = document.getElementById('selfie');
-	var elJitsi = document.getElementById('jitsi');
+	
 	if (visible === true)
 	{
 		gui.show();
@@ -504,7 +519,7 @@ function ShowUI(visible)
 		elSelfie.style.display = "";
 		//elChat.style.display = "";
 		elStats.style.display = "";
-		elJitsi.style.display = "none";
+		
 	}
 	else
 	{
@@ -515,7 +530,7 @@ function ShowUI(visible)
 		elSelfie.style.display = "none";
 		//elChat.style.display = "none";
 		elStats.style.display = "none";
-		elJitsi.style.display = "";
+		
 
 	}
 }
@@ -3773,6 +3788,10 @@ function StartDSP()
 
 			break;
 
+			case 74: //J
+				JitsiVisible = !JitsiVisible;
+				ShowJitsi(JitsiVisible);
+				break;
 			
 		}
 	}, false);
@@ -3922,8 +3941,8 @@ if (jitsi === 'true')
 	const domain = 'meet.jit.si';
 	const jitsi_options = {
 		roomName: 'NewAtlantis',
-		width: 500,
-		height: 300,
+		width: 260,
+		height: 260,
 		parentNode: document.querySelector('#jitsi'),
 		userInfo: {
 			//email: 'email@jitsiexamplemail.com',
@@ -3939,9 +3958,10 @@ else if (mode === 'view')
 	ShowUI(false);
 }
 
-UIVisible = false;
+//UIVisible = false;
 ShowUI(UIVisible);
-
+//JitsiVisible = false;
+ShowJitsi(JitsiVisible);
 
 
 
