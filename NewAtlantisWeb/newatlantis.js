@@ -2688,9 +2688,10 @@ function createObject(o)
 
 				scene.add(disc.clone());
 				
+				
 			}
 			
-			
+
 
 
 		}	
