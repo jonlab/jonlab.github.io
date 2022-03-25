@@ -3934,6 +3934,7 @@ postsRef.on('child_removed', function (snapshot) {
 });
 
 
+
 //if (mode === 'jitsi')
 if (jitsi === 'true')
 {
