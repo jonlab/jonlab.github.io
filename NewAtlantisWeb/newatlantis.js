@@ -96,6 +96,7 @@ var baseurl_streamsearch = "https://locusonus.org/soundmap/list/na";
 //var baseurl_streamsearch = "https://locusonus.org/soundmap/list/";
 var controller_stream;
 var controller_createstream;
+var controller_streams;
 var stream_list;
 
 
@@ -410,7 +411,7 @@ var Inspector = function()
 
 			na_toolbox[2].items = [];
 
-	
+			Log("found " + result.length + " streams!");
 
 			for (var i in result)
 			{
@@ -424,11 +425,15 @@ var Inspector = function()
 				entry2.data = entry.url;
 				na_toolbox[2].items.push(entry2);
 			}
-			if (controller_stream !== undefined)
-				controller_stream.remove();
+			//if (controller_stream !== undefined)
+			//	controller_stream.remove();
 			if (controller_createstream !== undefined)
 			controller_createstream.remove();
-			controller_createstream = fAudioSourcesStream.add(parameters, "stream", stream_list);
+			if (controller_streams !== undefined)
+			controller_streams.remove();
+			
+			//fAudioSourcesStream.remove();
+			controller_streams = fAudioSourcesStream.add(parameters, "stream", stream_list);
 			controller_createstream = fAudioSourcesStream.add(parameters, "createStream");
 			if (result.length > 0)
 				this.stream = result[0].url;
@@ -1345,7 +1350,7 @@ function animate()
 				{
 					DeselectObject();
 				}
-				
+
 				
 			}
 			else if (gamepad_buttons[gamepad_button_triangle].pressed)
@@ -1439,9 +1444,18 @@ function animate()
 
 			if (gamepad_buttons[8].pressed)
 			{
+				
 				JitsiVisible = !JitsiVisible;
 				ShowJitsi(JitsiVisible);
 			}
+
+			if (gamepad_buttons[9].pressed) //option
+			{
+				Log("Search for streams...");
+				parameters.searchStream();
+			}
+			
+				
 
 
 
