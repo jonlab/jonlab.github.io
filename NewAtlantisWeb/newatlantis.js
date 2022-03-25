@@ -1346,6 +1346,7 @@ function animate()
 					DeselectObject();
 				}
 				
+				
 			}
 			else if (gamepad_buttons[gamepad_button_triangle].pressed)
 			{
