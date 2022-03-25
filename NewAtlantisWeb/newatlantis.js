@@ -435,7 +435,7 @@ var Inspector = function()
 		}
 		req.send();
 	};
-	
+
 
 
 
@@ -1433,6 +1433,12 @@ function animate()
 				Log("gamepad right : next item");
 				toolItemIncrement(1);
 				//conf++
+			}
+
+			if (gamepad_buttons[8].pressed)
+			{
+				JitsiVisible = !JitsiVisible;
+				ShowJitsi(JitsiVisible);
 			}
 
 
