@@ -1458,6 +1458,9 @@ function animate()
 		}
 	}
 	
+
+	
+
 	//plugin.update(dt);
 
 	profiler0 = ProfilerStop();
