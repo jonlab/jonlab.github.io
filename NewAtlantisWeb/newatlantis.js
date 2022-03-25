@@ -405,13 +405,24 @@ var Inspector = function()
 			console.log("streams returned:", result);
 			//construct the results UI
 			stream_list = {};
+
+
+
+			na_toolbox[2].items = [];
+
+	
+
 			for (var i in result)
 			{
 
 				var entry = result[i];
 				var key = entry.name;
 				stream_list[key] = entry.url;
-				
+
+				let entry2 = {};
+				entry2.name = entry.name;
+				entry2.data = entry.url;
+				na_toolbox[2].items.push(entry2);
 			}
 			if (controller_stream !== undefined)
 				controller_stream.remove();
@@ -424,6 +435,8 @@ var Inspector = function()
 		}
 		req.send();
 	};
+
+
 
 	this.loadModelFile = function()
 	{
@@ -2687,7 +2700,7 @@ function createObject(o)
 				let offset_y = -1;
 				if (o.scale !== undefined)
 				{
-					offset_y = -o.scale.y/2;
+					offset_y = -o.scale.y/2.1;
 				}
 				disc.position.set(o.x, o.y+offset_y, o.z);
 				disc.rotation.set(0,0,0);
@@ -4016,6 +4029,8 @@ for (let n in na_library_sound)
 	na_toolbox[1].items.push(entry);
 }
 
+//streams
+//searchStream();
 
 
 }
@@ -4601,6 +4616,8 @@ function CreateGUI()
 	//gui.add(parameters, "teleport");
 
 	
+	//streams
+	parameters.searchStream();
 	
 
 	parameters.name = "name";
