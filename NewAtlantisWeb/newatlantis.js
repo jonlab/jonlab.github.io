@@ -1249,12 +1249,12 @@ function animate()
 			
 			if (Math.abs(movex)>deadzone)
 			{
-				moveCameraRight(movex*avatar_speed*dt*2);
+				moveCameraRight(movex*avatar_speed*dt);
 				avatar_dirty = true;
 			}
 			if (Math.abs(movey)>deadzone)
 			{
-				moveCameraForward(-movey*avatar_speed*dt*5);
+				moveCameraForward(-movey*avatar_speed*dt*2);
 				avatar_dirty = true;
 			}
 
@@ -1371,21 +1371,24 @@ function animate()
 				Log("gamepad square");
 
 				//depending on current tool
-
+				let item = na_toolbox[current_tool].items[na_toolbox[current_tool].current];
 				if (na_toolbox[current_tool].name === "sample")
 				{
-					let url = na_toolbox[current_tool].items[na_toolbox[current_tool].current].data;
-					ActionSound(url, "noname");
+					let url = item.data;
+					
+					ActionSound(url, item.name);
 				}
 				else if (na_toolbox[current_tool].name === "stream")
 				{
-					let url = na_toolbox[current_tool].items[na_toolbox[current_tool].current].data;
-					ActionStream(url, "noname");
+					let url = item.data;
+					
+					ActionStream(url, item.name);
 				}
 				else if (na_toolbox[current_tool].name === "object")
 				{
-					let kind = na_toolbox[current_tool].items[na_toolbox[current_tool].current].data;
-					ActionObject(kind, "noname");
+					let kind = item.data;
+					
+					ActionObject(kind, item.name);
 				}
 
 
@@ -2674,14 +2677,19 @@ function createObject(o)
 				//material.wireframe = false;
 
 				//we add a black disc in the color layer
-				let geometryDisc = new THREE.CylinderBufferGeometry( 1.5, 1.5, 0.2, 16 );
+				let geometryDisc = new THREE.CylinderBufferGeometry( 1.5, 1.5, 0.1, 16 );
 				let materialDisc = new THREE.MeshBasicMaterial({ color: 0x000000 });
 				materialDisc.color.r = o.r;
 				materialDisc.color.g = o.g;
 				materialDisc.color.b = o.b;
 				var disc = new THREE.Mesh(geometryDisc, materialDisc);
 				//var rootMask = new THREE.Group();
-				disc.position.set(o.x, o.y-1, o.z);
+				let offset_y = -1;
+				if (o.scale !== undefined)
+				{
+					offset_y = -o.scale.y/2;
+				}
+				disc.position.set(o.x, o.y+offset_y, o.z);
 				disc.rotation.set(0,0,0);
 				//rootMask.add(outlineMask);
 				sceneMask.add(disc);
@@ -3995,6 +4003,18 @@ else if (mode === 'view')
 ShowUI(UIVisible);
 //JitsiVisible = false;
 ShowJitsi(JitsiVisible);
+
+//init toolbox
+
+//sounds
+na_toolbox[1].items = [];
+for (let n in na_library_sound)
+{
+	let entry = {};
+	entry.name = n;
+	entry.data = na_library_sound[n];
+	na_toolbox[1].items.push(entry);
+}
 
 
 
