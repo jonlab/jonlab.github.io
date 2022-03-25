@@ -445,6 +445,7 @@ var Inspector = function()
 
 
 
+
 	this.loadModelFile = function()
 	{
 		inputFileModel.click();
