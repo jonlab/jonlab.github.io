@@ -999,8 +999,11 @@ light.shadow.camera.far = 1000;
 light.shadow.bias = 0.0001;
 light.shadow.mapSize.width = 1024;
 light.shadow.mapSize.height = 1024;
-scene.add(light);
+
 sceneMask.add(light);
+
+
+scene.add(light.clone());
 
 var axesHelper = new THREE.AxesHelper(1);
 scene.add(axesHelper);
@@ -2663,6 +2666,32 @@ function createObject(o)
 			//linear inverse exponential
 			sound.setDistanceModel("exponential");
 			material.wireframe = true;
+
+			//dirty patch
+			if (o.name[1] === '-')
+			{
+				//son signalétique
+				//material.wireframe = false;
+
+				//we add a black disc in the color layer
+				let geometryDisc = new THREE.CylinderBufferGeometry( 1.5, 1.5, 0.2, 16 );
+				let materialDisc = new THREE.MeshBasicMaterial({ color: 0x000000 });
+				materialDisc.color.r = o.r;
+				materialDisc.color.g = o.g;
+				materialDisc.color.b = o.b;
+				var disc = new THREE.Mesh(geometryDisc, materialDisc);
+				//var rootMask = new THREE.Group();
+				disc.position.set(o.x, o.y-1, o.z);
+				disc.rotation.set(0,0,0);
+				//rootMask.add(outlineMask);
+				sceneMask.add(disc);
+
+				scene.add(disc.clone());
+				
+			}
+			
+
+
 		}	
 
 		else if (o.kind === "resonator")
