@@ -1251,10 +1251,11 @@ function animate()
 				}
 			}
 		}
-		for (const pad of navigator.getGamepads()) 
+		//for (const pad of navigator.getGamepads()) 
+		const pad = navigator.getGamepads()[0];
+		//{
+		if (pad !== null)
 		{
-			if (pad === null)
-			continue;
 			//console.log(pad);
 			var movex = pad.axes[0]-pad_movex_center;
 			var movey = pad.axes[1]-pad_movey_center;
@@ -1459,7 +1460,7 @@ function animate()
 	}
 	
 
-	
+
 
 	//plugin.update(dt);
 
