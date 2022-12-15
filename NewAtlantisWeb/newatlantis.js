@@ -99,7 +99,6 @@ var controller_createstream;
 var controller_streams;
 var stream_list;
 
-
 var scene; //Three js 3D scene
 var sceneMask;
 var raycaster = new THREE.Raycaster();
@@ -327,6 +326,13 @@ var Inspector = function()
 				console.log("ok !");
 			}
 		}
+		ActionStream(url, name);
+	};
+
+	this.createManualStream = function()
+	{
+		var url = this.url;
+		var name = "stream";
 		ActionStream(url, name);
 	};
 
@@ -4497,6 +4503,7 @@ let fSpace;
 let fInspector;
 let fAudioSourcesFreeSound;
 let fAudioSourcesStream;
+let fAudioSourcesManualStream;
 let controllerSelected;
 let controllerColor;
 let controllerRolloffFactor;
@@ -4617,6 +4624,10 @@ function CreateGUI()
 	fAudioSourcesStream.add(parameters, "searchStream");
 	
 
+	fAudioSourcesManualStream = fAudioSources.addFolder("Manual Stream");
+	fAudioSourcesManualStream.add(parameters, "url");
+	fAudioSourcesManualStream.add(parameters, "createManualStream");
+	
 	//fBox.add(parameters, "box1");
 	//fBox.add(parameters, "box2");
 	//fBox.add(parameters, "box3");
